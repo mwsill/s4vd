@@ -84,7 +84,7 @@ s4vd <- function(
 			}
 			
 		}
-		if(stop)break
+		if(stop|e==iter)break
 	}
 	params <- list(r.steps = r.steps, c.steps=c.steps , r.err=r.err, c.err=c.err, iter=iter, ss.thr=ss.thr, size=size, weak=weak, r.overlap=r.overlap, c.overlap=c.overlap, r.negcorr=r.negcorr, c.negcorr=c.negcorr, nbiclust=nbiclust, merr=merr)
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
@@ -134,7 +134,7 @@ u.stepsnc <- function(ss,ss.index,v0,X,lambda,weak){
 	ssX <- X[,ss.index[,ss]]
 	ssv0 <- v0[ss.index[,ss]]
 	ols <- ssX%*%ssv0
-	delta <- lambda * runif(length(ols),1-weak,1) 
+	delta <- lambda * runif(length(ols),weak,1) 
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	return(uc)
 }	
@@ -143,7 +143,7 @@ u.steps <- function(ss,ss.index,v0,X,lambda,weak){
 	ssX <- X[,ss.index[,ss]]
 	ssv0 <- v0[ss.index[,ss]]
 	ols <- ssX%*%ssv0
-	delta <- lambda * runif(length(ols),1-weak,1) 
+	delta <- lambda * runif(length(ols),weak,1) 
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0 
 	return(uc)
