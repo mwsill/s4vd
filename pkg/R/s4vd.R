@@ -2,8 +2,8 @@ s4vd <- function(
 		X        		    # the p times n data matrix (p>>n)
 		,steps=100          # number of subsamples used to calculate the relative selection frequencies for left singular vector coefficients that correspond to the rows of X
 		,pcer=0.05          # expected number of falsly selected left singular vector coefficients 	
-		,iter=50	        # maximal number of iterations to fit a single bicluster	
-		,ss.thr=0.6         # cutoff threshold (relative selection frequency) for the stability selection
+		,iter=20	        # maximal number of iterations to fit a single bicluster	
+		,ss.thr=0.8         # cutoff threshold (relative selection frequency) for the stability selection
 		,size=0.5           # size of the subsamples for the stability selection
 		,weak=0.6           # weakness parameter for the randomised lasso
 		,r.overlap=TRUE     # allow bicluster to be column overlapping
@@ -16,6 +16,7 @@ s4vd <- function(
 ){
 	startX <- X
 	number <- FALSE
+	us <- list(NULL,NULL,FALSE)
 	p <- nrow(X)
 	n  <- ncol(X)
 	rowsin <- rep(TRUE,nrow(X))
@@ -44,11 +45,9 @@ s4vd <- function(
 			break
 		}
 		for(e in 1:iter){
-			#cat(".")
 			vs <- updatev(X, u0, steps, c.err= pcer*ncol(X), ss.thr,size, weak, c.negcorr, mc.cores)
 			v1 <- vs[[1]]/sqrt(sum(vs[[1]]^2)) 
 			v1[is.na(v1)] <- 0
-			cat("cols: ",length(which(v1!=0)),"\n")
 			if(vs[[3]]){
 				stop <- TRUE
 				break
@@ -56,25 +55,20 @@ s4vd <- function(
 			us <- updateu(X, v1, steps, r.err= pcer*nrow(X), ss.thr,size, weak, r.negcorr, mc.cores)
 			u1 <- us[[1]]/sqrt(sum(us[[1]]^2))
 			u1[is.na(u1)] <- 0
-			cat("rows: ",length(which(u1!=0)),"\n")
 			if(us[[3]]){
 				stop <- TRUE
 				break
 			}
 			ud <- sqrt(sum((u0-u1)^2))
 			vd <- sqrt(sum((v0-v1)^2))
-			vm <- mean(abs(u0-u1))
-			um <- mean(abs(v0-v1))
-			cat("iter: ",e," merr: ",mean(c(ud,vd)),"\n")
-			cat("iter: ",e," merr: ",mean(c(um,vm)),"\n")
+			cat("iter: ",e," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
 			r.in <- which(u1!=0)
 			c.in <- which(v1!=0)
 			d1 <- as.numeric(t(u0)%*%X%*%v0)
 			v0 <- v1
 			u0 <- u1
 			d0 <- d1
-			#cat("iter: ",e," merr: ",min(vd,ud),"\n")
-			if(mean(c(vd,ud)) < merr){
+			if(min(c(vd,ud)) < merr & e > 1){
 				cat("\n")
 				niter[k] <- e
 				Rspath[[k]] <- us[[2]]
@@ -95,7 +89,7 @@ s4vd <- function(
 					X <- startX[rowsin,colsin]
 				} 
 				if(r.overlap&c.overlap){
-					X <- X - d0*u0%*%t(v0)
+					X <- round(X - d0*u0%*%t(v0),digits=10)
 				}
 				break
 			}
@@ -103,12 +97,12 @@ s4vd <- function(
 		}
 		if(stop){
 			number <- k-1
-			cat("no further stable bicluster, increase pcer!","\n")
+			cat("no further stable bicluster, increase PCER!","\n")
 			break
 		}
 		if(e==iter){
 			number <- k-1
-			cat("bicluster not coverged, increase number of iterations!","\n")
+			cat("bicluster not coverged, reduce merr!","\n")
 			break
 		}
 	}
@@ -130,6 +124,34 @@ s4vd <- function(
 	Number <- number
 	info <- list(ul=ul,vl=vl,dl=dl,Rspath=Rspath,Cspath=Cspath,niter=niter)
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
+}
+
+updateu.pw <- function(X, v0, r.steps, r.err, size, weak, r.negcorr){
+	p <- nrow(X)
+	n <- ncol(X)
+	ols <- X%*%v0
+	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
+	lambda <- lambdas[floor(0.333*p)]
+	ss.index <- sapply(1:r.steps,function(x){sample(1:n,n*size)})
+	if(r.negcorr){
+		temp <- matrix(unlist((mclapply(1:r.steps,u.stepsnc,ss.index,v0,X,
+											lambda=lambda,weak,mc.cores=mc.cores))),nrow=p)
+		qu <- mean(colSums(temp!=0))
+		ss.thr <- (1/(2*r.err))*(qu^2/p)
+	}
+	else{
+		temp <- matrix(unlist((mclapply(1:r.steps,u.steps,ss.index,v0,X,
+											lambda=lambda,weak,mc.cores=mc.cores))),nrow=p)
+		qu <- mean(colSums(temp!=0))
+		ss.thr <- (1/(2*r.err))*(qu/p)
+	}
+	stable <- which(apply(probpath>=ss.thr,1,any))
+	stop <- FALSE
+	if(length(stable)==0) stop <- TRUE
+	uc <- rep(0,p)
+	uc[stable] <- (sign(ols)*(abs(ols)>=lambdas[i-1])*(abs(ols)-lambdas[i-1]))[stable]
+	if(!r.negcorr) uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0 
+	return(list(uc,probpath,stop))
 }
 
 updateu <- function(X, v0, r.steps, r.err, ss.thr,size, weak, r.negcorr, mc.cores){
