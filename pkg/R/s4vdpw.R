@@ -14,7 +14,7 @@ s4vdpw <- function(
 		,merr=0.05          # convergence parameter 
 		,mc.cores=1         # number of cores for parallelization   
 		,G=10               # number of control iterations if no stable features are selected 
-		,d=0.05             # tolerance for finding the threshold e.g. ss.thr +/- d 
+		,d=0.125             # tolerance for finding the threshold e.g. ss.thr +/- d 
 ){
 	startX <- X
 	number <- FALSE
@@ -68,7 +68,7 @@ s4vdpw <- function(
 			}
 			ud <- sqrt(sum((u0-u1)^2))
 			vd <- sqrt(sum((v0-v1)^2))
-			#cat("iter: ",e," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
+			cat("iter: ",e," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
 			r.in <- which(u1!=0)
 			c.in <- which(v1!=0)
 			d1 <- as.numeric(t(u0)%*%X%*%v0)
@@ -139,7 +139,7 @@ updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=N
 	n <- ncol(X)
 	ols <- X%*%v0
 	lambdas <- seq(max(abs(ols)),0,length.out = p+1)
-	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))
+	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	for(g in 1:(length(lambdas)/2)){
 		lambda <- lambdas[l]
 		ss.index <- sapply(1:r.steps,function(x){sample(1:n,n*size)})
@@ -155,7 +155,7 @@ updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=N
 			qu <- mean(colSums(temp!=0))
 			thr <- ((qu^2/(r.err*p))+1)/2
 		}
-		#cat("qu: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
+		cat("qu: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
 		if(thr > ss.thr-d & thr < ss.thr+d)break 
 		if(thr < ss.thr-d) l <- min(length(lambdas),l + ceiling(abs(ss.thr - thr)*p/g)) 
 		if(thr > ss.thr+d) l <- max(1,l - ceiling(abs(ss.thr - thr)*p/g)) 
@@ -179,7 +179,7 @@ updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=N
 				qu <- mean(colSums(temp!=0))
 				thr <- ((qu^2/(r.err*p))+1)/2
 			}
-			#cat("Squ: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
+			cat("Squ: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
 			stable <- which(rowMeans(temp!=0)>=thr)
 			if(length(stable)!=0|thr==0.5)break
 		}
@@ -218,7 +218,7 @@ updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NU
 	n <- ncol(X)
 	ols <- t(X)%*%u0
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.3,type=1))
+	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.3,type=1))[1]
 	for(g in 1:(length(lambdas)/2)){
 		lambda <- lambdas[l]
 		ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
@@ -234,7 +234,7 @@ updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NU
 			qv <- mean(colSums(temp!=0))
 			thr <- ((qv^2/(c.err*n))+1)/2
 		}
-		#cat("qv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
+		cat("qv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
 		if(thr > ss.thr-d & thr < ss.thr+d)break
 		if(thr < ss.thr-d) l <- min(length(lambdas),l + ceiling(abs(ss.thr - thr)*n/g)) 
 		if(thr > ss.thr+d) l <- max(1,l - ceiling(abs(ss.thr - thr)*n/g)) 
@@ -258,7 +258,7 @@ updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NU
 				qv <- mean(colSums(temp!=0))
 				thr <- ((qv^2/(c.err*n))+1)/2
 			}
-			#cat("Sqv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
+			cat("Sqv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
 			stable <- which(rowMeans(temp!=0)>=thr)
 			if(length(stable)!=0|thr==0.5)break
 		}
