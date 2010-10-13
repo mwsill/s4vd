@@ -196,7 +196,8 @@ updatev <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, mc.core
 	ols <- t(X)%*%u0
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
 	#lambdas <- seq(max(abs(ols)),0,length.out=p+1)
-	lpath <- length(lambdas)    
+	lpath <- length(lambdas)
+	qv <- numeric(length(lambdas))
 	qvmax <- sqrt((c.err)*((2*ss.thr)-1)*n)
 	probpath <- matrix(nrow=n,ncol=lpath)
 	if(c.negcorr){
@@ -204,8 +205,8 @@ updatev <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, mc.core
 			ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
 			temp <- matrix(unlist((mclapply(1:c.steps,v.stepsnc,ss.index,u0,X,
 												lambda=lambdas[i],weak,mc.cores=mc.cores))),nrow=n)
-			qv <- mean(colSums(temp!=0))
-			if(qv>qvmax){
+			qv[i] <- mean(colSums(temp!=0))
+			if(qv[i]>qvmax){
 				break
 			}
 			probpath[,i] <- rowMeans(temp!=0)
@@ -215,8 +216,8 @@ updatev <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, mc.core
 			ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
 			temp <- matrix(unlist((mclapply(1:c.steps,v.steps,ss.index,u0,X,
 												lambda=lambdas[i],weak,mc.cores=mc.cores))),nrow=n)
-			qv <- mean(colSums(temp!=0))
-			if(qv>qvmax){
+			qv[i] <- mean(colSums(temp!=0))
+			if(qv[i]>qvmax){
 				break
 			}
 			probpath[,i] <- rowMeans(temp!=0)
@@ -228,7 +229,7 @@ updatev <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, mc.core
 	vc <- rep(0,n)
 	vc[stable] <- (sign(ols)*(abs(ols)>=lambdas[i-1])*(abs(ols)-lambdas[i-1]))[stable]
 	if(!c.negcorr) vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
-	return(list(vc,probpath,stop))
+	return(list(vc,probpath,stop,qv))
 }
 
 
