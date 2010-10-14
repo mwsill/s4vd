@@ -50,19 +50,19 @@ s4vdpw <- function(
 		lu <- NULL
 		for(e in 1:iter){
 			cat(".")
-			vs <- updatev.pw(X, u0, steps, c.err=pcer*ncol(X),ss.thr, size, weak, c.negcorr, lv,G=G,verbose)
+			vs <- updatev.pw(X, u0, steps, pcer,ss.thr, size, weak, c.negcorr, lv,G=G,verbose)
 			v1 <- vs[[1]]/sqrt(sum(vs[[1]]^2)) 
 			v1[is.na(v1)] <- 0
 			lv <- vs[[4]]
-			if(vs[[3]]){
+			if(vs[[3]]|all(vs[[1]]==0)){
 				stop <- TRUE
 				break
 			}
-			us <- updateu.pw(X, v1, steps, r.err=pcer*nrow(X),ss.thr,size, weak, r.negcorr, lu,G=G,verbose)
+			us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, weak, r.negcorr, lu,G=G,verbose)
 			u1 <- us[[1]]/sqrt(sum(us[[1]]^2))
 			u1[is.na(u1)] <- 0
 			lu <- us[[4]]
-			if(us[[3]]){
+			if(us[[3]]|all(vs[[1]]==0)){
 				stop <- TRUE
 				break
 			}
@@ -76,7 +76,7 @@ s4vdpw <- function(
 			u0 <- u1
 			d0 <- d1
 			if(min(c(vd,ud)) < merr & e > 1){
-				cat("\n")
+				cat("> nrows:",sum(u0!=0),"ncols: ",sum(v0!=0),"\n")
 				niter[k] <- e
 				Rspath[[k]] <- us[[2]]
 				Cspath[[k]] <- vs[[2]]
@@ -134,11 +134,12 @@ s4vdpw <- function(
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
 
-updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=NULL, G=10,verbose){
+updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, weak, r.negcorr, l=NULL, G=10,verbose){
 	p <- nrow(X)
 	n <- ncol(X)
+	err <- pcer*p
 	ols <- X%*%v0
-	lambdas <- seq(max(abs(ols)),0,length.out = p+1)
+	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	for(g in 1:(length(lambdas))){
 		lambda <- lambdas[l]
@@ -147,15 +148,21 @@ updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=N
 			temp <- matrix(unlist((mclapply(1:r.steps,u.stepsnc,ss.index,v0,X,
 												lambda=lambda,weak))),nrow=p)
 			qu <- mean(colSums(temp!=0))
-			thr <- ((qu^2/(r.err*p))+1)/2
+			thr <- ((qu^2/(err*p))+1)/2
 		}
 		else{
 			temp <- matrix(unlist((mclapply(1:r.steps,u.steps,ss.index,v0,X,
 												lambda=lambda,weak))),nrow=p)
 			qu <- mean(colSums(temp!=0))
-			thr <- ((qu^2/(r.err*p))+1)/2
+			thr <- ((qu^2/(err*p))+1)/2
 		}
-		if(verbose>1) cat("qu: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
+		if(verbose>1) cat("qu: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l)
+		if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
+			pcer <- pcer + 0.01
+			err <- pcer * p
+			if(verbose>1) cat("pcer increased to:", pcer)
+		}
+		if(verbose>1)cat("\n")
 		#if(thr==0.5 & l==length(lambdas))break
 		#if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
@@ -173,13 +180,13 @@ updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=N
 				temp <- matrix(unlist((mclapply(1:r.steps,u.stepsnc,ss.index,v0,X,
 													lambda=lambda,weak))),nrow=p)
 				qu <- mean(colSums(temp!=0))
-				thr <- ((qu^2/(r.err*p))+1)/2
+				thr <- ((qu^2/(err*p))+1)/2
 			}
 			else{
 				temp <- matrix(unlist((mclapply(1:r.steps,u.steps,ss.index,v0,X,
 													lambda=lambda,weak))),nrow=p)
 				qu <- mean(colSums(temp!=0))
-				thr <- ((qu^2/(r.err*p))+1)/2
+				thr <- ((qu^2/(err*p))+1)/2
 			}
 			if(verbose>1) cat("Squ: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
 			stable <- which(rowMeans(temp!=0)>=thr)
@@ -188,7 +195,8 @@ updateu.pw <- function(X, v0, r.steps, r.err, ss.thr, size, weak, r.negcorr, l=N
 		if(length(stable)==0) stop <- TRUE
 	}	
 	uc <- rep(0,p)
-	uc[stable] <- (sign(ols)*(abs(ols)>=lambda)*(abs(ols)-lambda))[stable]
+	delta <- lambda/(abs(ols)^weak)  
+	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
 	if(!r.negcorr) uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0
 	probpath <- rowMeans(temp!=0)
 	return(list(uc,probpath,stop,l,thr))
@@ -200,8 +208,10 @@ u.stepsnc <- function(ss,ss.index,v0,X,lambda,weak){
 	ssX <- X[,ss.index[,ss]]
 	ssv0 <- v0[ss.index[,ss]]
 	ols <- ssX%*%ssv0
-	delta <- lambda * runif(length(ols),weak,1) 
+	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
+	uc[is.na(uc)] <- 0
 	return(uc)
 }	
 
@@ -209,15 +219,18 @@ u.steps <- function(ss,ss.index,v0,X,lambda,weak){
 	ssX <- X[,ss.index[,ss]]
 	ssv0 <- v0[ss.index[,ss]]
 	ols <- ssX%*%ssv0
-	delta <- lambda * runif(length(ols),weak,1) 
+	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0 
+	uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0
+	uc[is.na(uc)] <- 0
 	return(uc)
 }	
 
-updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NULL, G=10, verbose){
+updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, weak, c.negcorr, l=NULL, G=10, verbose){
 	p <- nrow(X)
 	n <- ncol(X)
+	err <- pcer * n
 	ols <- t(X)%*%u0
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.3,type=1))[1]
@@ -228,15 +241,21 @@ updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NU
 			temp <- matrix(unlist((mclapply(1:c.steps,v.stepsnc,ss.index,u0,X,
 												lambda=lambda,weak))),nrow=n)
 			qv <- mean(colSums(temp!=0))
-			thr <- ((qv^2/(c.err*n))+1)/2
+			thr <- ((qv^2/(err*n))+1)/2
 		}
 		else{
 			temp <- matrix(unlist((mclapply(1:c.steps,v.steps,ss.index,u0,X,
 												lambda=lambda,weak))),nrow=n)
 			qv <- mean(colSums(temp!=0))
-			thr <- ((qv^2/(c.err*n))+1)/2
+			thr <- ((qv^2/(err*n))+1)/2
 		}
-		if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
+		if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l)
+		if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
+			pcer <- pcer + 0.01
+			err <- pcer * n
+			if(verbose>1) cat("pcer increased to:", pcer)
+		}
+		if(verbose>1)cat("\n")
 	#	if(thr==0.5 & l==length(lambdas))break
 	#	if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
@@ -254,13 +273,13 @@ updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NU
 				temp <- matrix(unlist((mclapply(1:c.steps,v.stepsnc,ss.index,u0,X,
 													lambda=lambda,weak))),nrow=n)
 				qv <- mean(colSums(temp!=0))
-				thr <- ((qv^2/(c.err*n))+1)/2
+				thr <- ((qv^2/(err*n))+1)/2
 			}
 			else{
 				temp <- matrix(unlist((mclapply(1:c.steps,v.steps,ss.index,u0,X,
 													lambda=lambda,weak))),nrow=n)
 				qv <- mean(colSums(temp!=0))
-				thr <- ((qv^2/(c.err*n))+1)/2
+				thr <- ((qv^2/(err*n))+1)/2
 			}
 			if(verbose>1) cat("Sqv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
 			stable <- which(rowMeans(temp!=0)>=thr)
@@ -269,7 +288,8 @@ updatev.pw <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, l=NU
 		if(length(stable)==0) stop <- TRUE
 	}	
 	vc <- rep(0,n)
-	vc[stable] <- (sign(ols)*(abs(ols)>=lambda)*(abs(ols)-lambda))[stable]
+	delta <- lambda/(abs(ols)^weak) 
+	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
 	if(!c.negcorr) vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
 	probpath <- rowMeans(temp!=0)
 	return(list(vc,probpath,stop,l,thr))
@@ -279,8 +299,10 @@ v.stepsnc <- function(ss,ss.index,u0,X,lambda,weak){
 	ssX <- X[ss.index[,ss],]
 	ssu0 <- u0[ss.index[,ss]]
 	ols <- t(ssX)%*%ssu0
-	delta <- lambda * runif(length(ols),weak,1) 
+	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
 	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
+	vc[is.na(vc)] <- 0
 	return(vc)
 }	
 
@@ -288,9 +310,11 @@ v.steps <- function(ss,ss.index,u0,X,lambda,weak){
 	ssX <- X[ss.index[,ss],]
 	ssu0 <- u0[ss.index[,ss]]
 	ols <- t(ssX)%*%ssu0
-	delta <- lambda * runif(length(ols),weak,1) 
+	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
 	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
+	vc[is.na(vc)] <- 0
 	return(vc)
 }	
 
