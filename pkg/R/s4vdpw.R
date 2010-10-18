@@ -1,12 +1,12 @@
 s4vdpw <- function(
-		X        		    # the p times n data matrix (p>>n)
-		,steps=100          # number of subsamples used to calculate the relative selection frequencies for left singular vector coefficients that correspond to the rows of X
-		,pcer=0.05          # expected number of falsly selected left singular vector coefficients 	
-		,pcer.max=2*pcer
+		X        		    # data matrix 
+		,steps=200          # number of subsamples used to calculate the relative selection frequencies for left singular vector coefficients that correspond to the rows of X
+		,pcer=0.1           # desired per comparison error rate  	
+		,pcer.max=2*pcer    #  
 		,iter=100	        # maximal number of iterations to fit a single bicluster	
-		,ss.thr=c(0.525,0.725)# cutoff threshold (relative selection frequency) for the stability selection
+		,ss.thr=c(0.6,0.7)  # desired area of cutoff threshold (relative selection frequency) for the stability selection
 		,size=0.5           # size of the subsamples for the stability selection
-		,weak=1             # weakness parameter for the randomised lasso 
+		,gamm=1             # gamma parmaeter for the adaptive lasso 0 == lasso  
 		,r.overlap=TRUE     # allow bicluster to be column overlapping
 		,c.overlap=TRUE     # allow bicluster to be row overlapping		
 		,r.negcorr=TRUE     # allow for negative correlation of rows (genes) over columns (samples)  
@@ -14,8 +14,7 @@ s4vdpw <- function(
 		,nbiclust=20        # maximal number of biclusters
 		,merr=0.05          # convergence parameter 
 		,mc.cores=1         # number of cores for parallelization   
-		,G=5               # number of control iterations if no stable features are selected
-		,verbose=0
+		,verbose=0          # verbose level 0 - 1 - 2
 ){
 	startX <- X
 	number <- FALSE
@@ -53,19 +52,20 @@ s4vdpw <- function(
 			cat(".")
 			pcerv <- pceru <- pcer
 			#update v
-			vs <- updatev.pw(X, u0, steps, pcer,ss.thr, size, weak, c.negcorr, lv,G=G,verbose)
+			vs <- updatev.pw(X, u0, steps, pcer,ss.thr, size, gamm, c.negcorr, lv,G=G,verbose)
+			lv <- vs[[4]]
 			if(vs[[3]]|all(vs[[1]]==0)){
 				stop <- TRUE
 				if(pcer.max>pcer){
-					pcerv <- pcer +0.01
 					while(TRUE){
+						pcerv <- pcerv +0.01
 						if(verbose>1)cat("*")
-						vs <- updatev.pw(X, u0, steps, pcerv,ss.thr, size, weak, c.negcorr,l=NULL,G=G,verbose)
+						vs <- updatev.pw(X, u0, steps, pcerv,ss.thr, size, gamm, c.negcorr,lv,G=G,verbose)
+						lv <- vs[[4]]
 						if(!vs[[3]]|pcerv>=pcer.max){
 							if(!vs[[3]])stop <- FALSE
 							break
 						}
-					pcerv <- pcerv +0.01		
 					}
 				}
 				if(stop)break
@@ -75,26 +75,27 @@ s4vdpw <- function(
 			lv <- vs[[4]]
 			
 			# update u
-			us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, weak, r.negcorr, lu,G=G,verbose)
+			us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, gamm, r.negcorr, lu,G=G,verbose)
+			lu <- us[[4]]
 			if(us[[3]]|all(us[[1]]==0)){
 				stop <- TRUE
 				if(pcer.max>pcer){
-					pceru <- pcer +0.01
 					while(TRUE){
+						pceru <- pceru +0.01
 						if(verbose>1)cat("*")
-						us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, weak, r.negcorr, l=NULL,G=G,verbose)
+						us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, gamm, r.negcorr, lu,G=G,verbose)
+						lu <- us[[4]]
 						if(!us[[3]]|pceru>=pcer.max){
 							if(!us[[3]])stop <- FALSE
 							break
 						}
-						pceru <- pceru +0.01
 					}
 				}
 				if(stop)break
 			}
 			u1 <- us[[1]]/sqrt(sum(us[[1]]^2))
 			u1[is.na(u1)] <- 0
-			lu <- us[[4]]
+			
 			
 			ud <- sqrt(sum((u0-u1)^2))
 			vd <- sqrt(sum((v0-v1)^2))
@@ -153,7 +154,7 @@ s4vdpw <- function(
 	ul[[k]] <- u0
 	vl[[k]] <- v0
 	dl[k] <- d0
-	params <- list(steps = steps, pcer=pcer, iter=iter, ss.thr=ss.thr, size=size, weak=weak, r.overlap=r.overlap, c.overlap=c.overlap,
+	params <- list(steps = steps, pcer=pcer, iter=iter, ss.thr=ss.thr, size=size, gamm=gamm, r.overlap=r.overlap, c.overlap=c.overlap,
 			r.negcorr=r.negcorr, c.negcorr=c.negcorr, nbiclust=nbiclust, merr=merr)
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
@@ -162,7 +163,7 @@ s4vdpw <- function(
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
 
-updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, weak, r.negcorr, l=NULL, G=10,verbose){
+updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, gamm, r.negcorr, l=NULL, G=10,verbose){
 	p <- nrow(X)
 	n <- ncol(X)
 	err <- pcer*p
@@ -174,26 +175,26 @@ updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, weak, r.negcorr, l=NU
 		ss.index <- sapply(1:r.steps,function(x){sample(1:n,n*size)})
 		if(r.negcorr){
 			temp <- matrix(unlist((mclapply(1:r.steps,u.stepsnc,ss.index,v0,X,
-												lambda=lambda,weak))),nrow=p)
+												lambda=lambda,gamm))),nrow=p)
 			qu <- mean(colSums(temp!=0))
 			thr <- ((qu^2/(err*p))+1)/2
 		}
 		else{
 			temp <- matrix(unlist((mclapply(1:r.steps,u.steps,ss.index,v0,X,
-												lambda=lambda,weak))),nrow=p)
+												lambda=lambda,gamm))),nrow=p)
 			qu <- mean(colSums(temp!=0))
 			thr <- ((qu^2/(err*p))+1)/2
 		}
 		if(verbose>1) cat("qu: ",qu,"piu: ",thr,"lambda: ", l,"\n")
-		if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
-			while(TRUE){
-				pcer <- pcer + 0.01
-				err <- pcer * n
-				thr <- ((qu^2/(err*n))+1)/2
-				if(thr >= ss.thr[1] & thr <= ss.thr[2]|pcer>=0.5)break 
-			}
-			if(verbose>1) cat("qu:",qu,"piu: ",thr, "lambda: ", l," PCER:", pcer,"\n")
-		}
+		#if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
+		#	while(TRUE){
+		#		pcer <- pcer + 0.01
+		#		err <- pcer * n
+		#		thr <- ((qu^2/(err*n))+1)/2
+		#		if(thr >= ss.thr[1] & thr <= ss.thr[2]|pcer>=0.5)break 
+		#	}
+		#	if(verbose>1) cat("qu:",qu,"piu: ",thr, "lambda: ", l," PCER:", pcer,"\n")
+		#}
 		#if(thr==0.5 & l==length(lambdas))break
 		#if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
@@ -204,7 +205,7 @@ updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, weak, r.negcorr, l=NU
 	stop <- FALSE
 	if(length(stable)==0)stop <- TRUE
 	uc <- rep(0,p)
-	delta <- lambda/(abs(ols)^weak)  
+	delta <- lambda/(abs(ols)^gamm)  
 	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
 	if(!r.negcorr) uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0
 	probpath <- rowMeans(temp!=0)
@@ -213,30 +214,30 @@ updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, weak, r.negcorr, l=NU
 
 
 
-u.stepsnc <- function(ss,ss.index,v0,X,lambda,weak){
+u.stepsnc <- function(ss,ss.index,v0,X,lambda,gamm){
 	ssX <- X[,ss.index[,ss]]
 	ssv0 <- v0[ss.index[,ss]]
 	ols <- ssX%*%ssv0
-	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
-	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
+	delta <- lambda/(abs(ols)^gamm)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),gamm,1)       #randomised lasso
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	uc[is.na(uc)] <- 0
 	return(uc)
 }	
 
-u.steps <- function(ss,ss.index,v0,X,lambda,weak){
+u.steps <- function(ss,ss.index,v0,X,lambda,gamm){
 	ssX <- X[,ss.index[,ss]]
 	ssv0 <- v0[ss.index[,ss]]
 	ols <- ssX%*%ssv0
-	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
-	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
+	delta <- lambda/(abs(ols)^gamm)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),gamm,1)       #randomised lasso
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0
 	uc[is.na(uc)] <- 0
 	return(uc)
 }	
 
-updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, weak, c.negcorr, l=NULL, G=10, verbose){
+updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, gamm, c.negcorr, l=NULL, G=10, verbose){
 	p <- nrow(X)
 	n <- ncol(X)
 	err <- pcer * n
@@ -248,26 +249,26 @@ updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, weak, c.negcorr, l=NUL
 		ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
 		if(c.negcorr){
 			temp <- matrix(unlist((mclapply(1:c.steps,v.stepsnc,ss.index,u0,X,
-												lambda=lambda,weak))),nrow=n)
+												lambda=lambda,gamm))),nrow=n)
 			qv <- mean(colSums(temp!=0))
 			thr <- ((qv^2/(err*n))+1)/2
 		}
 		else{
 			temp <- matrix(unlist((mclapply(1:c.steps,v.steps,ss.index,u0,X,
-												lambda=lambda,weak))),nrow=n)
+												lambda=lambda,gamm))),nrow=n)
 			qv <- mean(colSums(temp!=0))
 			thr <- ((qv^2/(err*n))+1)/2
 		}
 		if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ", l,"\n")
-		if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
-			while(TRUE){
-				pcer <- pcer + 0.01
-				err <- pcer * n
-				thr <- ((qv^2/(err*n))+1)/2
-				if(thr >= ss.thr[1] & thr <= ss.thr[2]||pcer>=0.5)break 
-			}
-			if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ",l," PCER:", pcer,"\n")
-		}
+		#if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
+		#	while(TRUE){
+		#		pcer <- pcer + 0.01
+		#		err <- pcer * n
+		#		thr <- ((qv^2/(err*n))+1)/2
+		#		if(thr >= ss.thr[1] & thr <= ss.thr[2]||pcer>=0.5)break 
+		#	}
+		#	if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ",l," PCER:", pcer,"\n")
+		#}
 		#	if(thr==0.5 & l==length(lambdas))break
 	#	if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
@@ -278,30 +279,30 @@ updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, weak, c.negcorr, l=NUL
 	stop <- FALSE
 	if(length(stable)==0)stop <- TRUE
 	vc <- rep(0,n)
-	delta <- lambda/(abs(ols)^weak) 
+	delta <- lambda/(abs(ols)^gamm) 
 	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
 	if(!c.negcorr) vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
 	probpath <- rowMeans(temp!=0)
 	return(list(vc,probpath,stop,l,thr))
 }
 
-v.stepsnc <- function(ss,ss.index,u0,X,lambda,weak){
+v.stepsnc <- function(ss,ss.index,u0,X,lambda,gamm){
 	ssX <- X[ss.index[,ss],]
 	ssu0 <- u0[ss.index[,ss]]
 	ols <- t(ssX)%*%ssu0
-	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
-	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
+	delta <- lambda/(abs(ols)^gamm)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),gamm,1)       #randomised lasso
 	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	vc[is.na(vc)] <- 0
 	return(vc)
 }	
 
-v.steps <- function(ss,ss.index,u0,X,lambda,weak){
+v.steps <- function(ss,ss.index,u0,X,lambda,gamm){
 	ssX <- X[ss.index[,ss],]
 	ssu0 <- u0[ss.index[,ss]]
 	ols <- t(ssX)%*%ssu0
-	delta <- lambda/(abs(ols)^weak)                      #adaptive lasso 
-	#delta <- lambda * runif(length(ols),weak,1)       #randomised lasso
+	delta <- lambda/(abs(ols)^gamm)                      #adaptive lasso 
+	#delta <- lambda * runif(length(ols),gamm,1)       #randomised lasso
 	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
 	vc[is.na(vc)] <- 0
