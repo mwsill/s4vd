@@ -2,6 +2,7 @@ s4vdpw <- function(
 		X        		    # the p times n data matrix (p>>n)
 		,steps=100          # number of subsamples used to calculate the relative selection frequencies for left singular vector coefficients that correspond to the rows of X
 		,pcer=0.05          # expected number of falsly selected left singular vector coefficients 	
+		,pcer.max=2*pcer
 		,iter=100	        # maximal number of iterations to fit a single bicluster	
 		,ss.thr=c(0.525,0.725)# cutoff threshold (relative selection frequency) for the stability selection
 		,size=0.5           # size of the subsamples for the stability selection
@@ -50,32 +51,61 @@ s4vdpw <- function(
 		lu <- NULL
 		for(e in 1:iter){
 			cat(".")
+			pcerv <- pceru <- pcer
+			#update v
 			vs <- updatev.pw(X, u0, steps, pcer,ss.thr, size, weak, c.negcorr, lv,G=G,verbose)
+			if(vs[[3]]|all(vs[[1]]==0)){
+				stop <- TRUE
+				if(pcer.max>pcer){
+					pcerv <- pcer +0.01
+					while(TRUE){
+						if(verbose>1)cat("*")
+						vs <- updatev.pw(X, u0, steps, pcerv,ss.thr, size, weak, c.negcorr,l=NULL,G=G,verbose)
+						if(!vs[[3]]|pcerv>=pcer.max){
+							if(!vs[[3]])stop <- FALSE
+							break
+						}
+					pcerv <- pcerv +0.01		
+					}
+				}
+				if(stop)break
+			}
 			v1 <- vs[[1]]/sqrt(sum(vs[[1]]^2)) 
 			v1[is.na(v1)] <- 0
 			lv <- vs[[4]]
-			if(vs[[3]]|all(vs[[1]]==0)){
-				stop <- TRUE
-				break
-			}
+			
+			# update u
 			us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, weak, r.negcorr, lu,G=G,verbose)
+			if(us[[3]]|all(us[[1]]==0)){
+				stop <- TRUE
+				if(pcer.max>pcer){
+					pceru <- pcer +0.01
+					while(TRUE){
+						if(verbose>1)cat("*")
+						us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, weak, r.negcorr, l=NULL,G=G,verbose)
+						if(!us[[3]]|pceru>=pcer.max){
+							if(!us[[3]])stop <- FALSE
+							break
+						}
+						pceru <- pceru +0.01
+					}
+				}
+				if(stop)break
+			}
 			u1 <- us[[1]]/sqrt(sum(us[[1]]^2))
 			u1[is.na(u1)] <- 0
 			lu <- us[[4]]
-			if(us[[3]]|all(vs[[1]]==0)){
-				stop <- TRUE
-				break
-			}
+			
 			ud <- sqrt(sum((u0-u1)^2))
 			vd <- sqrt(sum((v0-v1)^2))
-			if(verbose > 0) cat("iter: ",e," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
+			if(verbose > 0) cat("iter: ",e," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd))," PCERu: ",pceru," PCERv: ",pcerv,"\n")
 			r.in <- which(u1!=0)
 			c.in <- which(v1!=0)
 			d1 <- as.numeric(t(u0)%*%X%*%v0)
 			v0 <- v1
 			u0 <- u1
 			d0 <- d1
-			if(min(c(vd,ud)) < merr & e > 1){
+			if(min(c(vd,ud)) < merr & e > 1 & pceru == pcer & pcerv == pcer){
 				cat("> nrows:",sum(u0!=0),"ncols: ",sum(v0!=0),"\n")
 				niter[k] <- e
 				Rspath[[k]] <- us[[2]]
@@ -118,8 +148,6 @@ s4vdpw <- function(
 	niter[k] <- e
 	Rspath[[k]] <- us[[2]]
 	Cspath[[k]] <- vs[[2]]
-	rows[rowsin] <- u0!=0
-	cols[colsin] <- v0!=0
 	Rows[[k]] <- rows
 	Cols[[k]] <- cols
 	ul[[k]] <- u0
@@ -156,44 +184,25 @@ updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, weak, r.negcorr, l=NU
 			qu <- mean(colSums(temp!=0))
 			thr <- ((qu^2/(err*p))+1)/2
 		}
-		if(verbose>1) cat("qu: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l)
+		if(verbose>1) cat("qu: ",qu,"piu: ",thr,"lambda: ", l,"\n")
 		if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
-			pcer <- pcer + 0.01
-			err <- pcer * p
-			if(verbose>1) cat("pcer increased to:", pcer)
+			while(TRUE){
+				pcer <- pcer + 0.01
+				err <- pcer * n
+				thr <- ((qu^2/(err*n))+1)/2
+				if(thr >= ss.thr[1] & thr <= ss.thr[2]|pcer>=0.5)break 
+			}
+			if(verbose>1) cat("qu:",qu,"piu: ",thr, "lambda: ", l," PCER:", pcer,"\n")
 		}
-		if(verbose>1)cat("\n")
 		#if(thr==0.5 & l==length(lambdas))break
 		#if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
-		if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) #+ ceiling(abs(ss.thr[1] - thr)*p/g)) 
-		if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) #- ceiling(abs(ss.thr[2] - thr)*p/g)) 
+		if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
+		if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
 	}
 	stable <- which(rowMeans(temp!=0)>=thr)
 	stop <- FALSE
-	if(length(stable)==0){
-		for(f in 1:G){
-			l <- l - 1
-			lambda <- lambdas[l]
-			ss.index <- sapply(1:r.steps,function(x){sample(1:n,n*size)})
-			if(r.negcorr){
-				temp <- matrix(unlist((mclapply(1:r.steps,u.stepsnc,ss.index,v0,X,
-													lambda=lambda,weak))),nrow=p)
-				qu <- mean(colSums(temp!=0))
-				thr <- ((qu^2/(err*p))+1)/2
-			}
-			else{
-				temp <- matrix(unlist((mclapply(1:r.steps,u.steps,ss.index,v0,X,
-													lambda=lambda,weak))),nrow=p)
-				qu <- mean(colSums(temp!=0))
-				thr <- ((qu^2/(err*p))+1)/2
-			}
-			if(verbose>1) cat("Squ: ",qu,"piu: ",thr,"lambdau: ",lambda,"l: ", l,"\n")
-			stable <- which(rowMeans(temp!=0)>=thr)
-			if(length(stable)!=0|thr<ss.thr[1])break
-		}
-		if(length(stable)==0) stop <- TRUE
-	}	
+	if(length(stable)==0)stop <- TRUE
 	uc <- rep(0,p)
 	delta <- lambda/(abs(ols)^weak)  
 	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
@@ -249,44 +258,25 @@ updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, weak, c.negcorr, l=NUL
 			qv <- mean(colSums(temp!=0))
 			thr <- ((qv^2/(err*n))+1)/2
 		}
-		if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l)
+		if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ", l,"\n")
 		if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
-			pcer <- pcer + 0.01
-			err <- pcer * n
-			if(verbose>1) cat("pcer increased to:", pcer)
+			while(TRUE){
+				pcer <- pcer + 0.01
+				err <- pcer * n
+				thr <- ((qv^2/(err*n))+1)/2
+				if(thr >= ss.thr[1] & thr <= ss.thr[2]||pcer>=0.5)break 
+			}
+			if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ",l," PCER:", pcer,"\n")
 		}
-		if(verbose>1)cat("\n")
-	#	if(thr==0.5 & l==length(lambdas))break
+		#	if(thr==0.5 & l==length(lambdas))break
 	#	if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
-		if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) #+ ceiling(abs(ss.thr[1] - thr)*n/g)) 
-		if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) #- ceiling(abs(ss.thr[2] - thr)*n/g)) 
+		if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
+		if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
 	}
 	stable <- which(rowMeans(temp!=0)>=thr)
 	stop <- FALSE
-	if(length(stable)==0){
-		for(f in 1:G){
-			l <- l-1
-			lambda <- lambdas[l]
-			ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
-			if(c.negcorr){
-				temp <- matrix(unlist((mclapply(1:c.steps,v.stepsnc,ss.index,u0,X,
-													lambda=lambda,weak))),nrow=n)
-				qv <- mean(colSums(temp!=0))
-				thr <- ((qv^2/(err*n))+1)/2
-			}
-			else{
-				temp <- matrix(unlist((mclapply(1:c.steps,v.steps,ss.index,u0,X,
-													lambda=lambda,weak))),nrow=n)
-				qv <- mean(colSums(temp!=0))
-				thr <- ((qv^2/(err*n))+1)/2
-			}
-			if(verbose>1) cat("Sqv:",qv,"piv: ",thr,"lambdav: ",lambda,"l: ", l,"\n")
-			stable <- which(rowMeans(temp!=0)>=thr)
-			if(length(stable)!=0|thr<ss.thr[1])break
-		}
-		if(length(stable)==0) stop <- TRUE
-	}	
+	if(length(stable)==0)stop <- TRUE
 	vc <- rep(0,n)
 	delta <- lambda/(abs(ols)^weak) 
 	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
