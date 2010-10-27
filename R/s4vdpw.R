@@ -10,7 +10,7 @@ s4vdpw <- function(
 		,r.overlap=TRUE     # allow bicluster to be column overlapping
 		,c.overlap=TRUE     # allow bicluster to be row overlapping		
 		,r.negcorr=TRUE     # allow for negative correlation of rows (genes) over columns (samples)  
-		,c.negcorr=FALSE    # allow for negative correlation of columns (samples) over rows (genes)
+		,c.negcorr=FALSE     # allow for negative correlation of columns (samples) over rows (genes)
 		,nbiclust=20        # maximal number of biclusters
 		,merr=0.05          # convergence parameter 
 		,mc.cores=1         # number of cores for parallelization   
@@ -52,15 +52,15 @@ s4vdpw <- function(
 			cat(".")
 			pcerv <- pceru <- pcer
 			#update v
-			vs <- updatev.pw(X, u0, steps, pcer,ss.thr, size, gamm, c.negcorr, lv,G=G,verbose)
+			vs <- updatev.pw(X, u0, steps, pcer,pcer.max,ss.thr, size, gamm, c.negcorr, lv,G=G,verbose)
 			lv <- vs[[4]]
 			if(vs[[3]]|all(vs[[1]]==0)){
 				stop <- TRUE
 				if(pcer.max>pcer){
 					while(TRUE){
 						pcerv <- pcerv +0.01
-						if(verbose>1)cat("*")
-						vs <- updatev.pw(X, u0, steps, pcerv,ss.thr, size, gamm, c.negcorr,lv,G=G,verbose)
+						if(verbose>1)cat("PCERV: ", pcerv,"\n")
+						vs <- updatev.pw(X, u0, steps, pcerv,pcer.max,ss.thr, size, gamm, c.negcorr,lv,G=G,verbose)
 						lv <- vs[[4]]
 						if(!vs[[3]]|pcerv>=pcer.max){
 							if(!vs[[3]])stop <- FALSE
@@ -75,15 +75,15 @@ s4vdpw <- function(
 			lv <- vs[[4]]
 			
 			# update u
-			us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, gamm, r.negcorr, lu,G=G,verbose)
+			us <- updateu.pw(X, v1, steps, pcer,pcer.max,ss.thr,size, gamm, r.negcorr, lu,G=G,verbose)
 			lu <- us[[4]]
 			if(us[[3]]|all(us[[1]]==0)){
 				stop <- TRUE
 				if(pcer.max>pcer){
 					while(TRUE){
 						pceru <- pceru +0.01
-						if(verbose>1)cat("*")
-						us <- updateu.pw(X, v1, steps, pcer,ss.thr,size, gamm, r.negcorr, lu,G=G,verbose)
+						if(verbose>1)cat("PCERU: ", pceru,"\n")
+						us <- updateu.pw(X, v1, steps, pceru,pcer.max,ss.thr,size, gamm, r.negcorr, lu,G=G,verbose)
 						lu <- us[[4]]
 						if(!us[[3]]|pceru>=pcer.max){
 							if(!us[[3]])stop <- FALSE
@@ -163,7 +163,7 @@ s4vdpw <- function(
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
 
-updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, gamm, r.negcorr, l=NULL, G=10,verbose){
+updateu.pw <- function(X, v0, r.steps, pcer,pcer.max, ss.thr, size, gamm, r.negcorr, l=NULL, G=10,verbose){
 	p <- nrow(X)
 	n <- ncol(X)
 	err <- pcer*p
@@ -186,15 +186,24 @@ updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, gamm, r.negcorr, l=NU
 			thr <- ((qu^2/(err*p))+1)/2
 		}
 		if(verbose>1) cat("qu: ",qu,"piu: ",thr,"lambda: ", l,"\n")
-		#if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
-		#	while(TRUE){
-		#		pcer <- pcer + 0.01
-		#		err <- pcer * n
-		#		thr <- ((qu^2/(err*n))+1)/2
-		#		if(thr >= ss.thr[1] & thr <= ss.thr[2]|pcer>=0.5)break 
-		#	}
-		#	if(verbose>1) cat("qu:",qu,"piu: ",thr, "lambda: ", l," PCER:", pcer,"\n")
-		#}
+		if(l == length(lambdas) & thr < ss.thr[1]){ 
+			while(pcer > 0.02){
+				pcer <- pcer - 0.01
+				err <- pcer * n
+				thr <- ((qu^2/(err*n))+1)/2
+				if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
+			}
+			if(verbose>1) cat("qu:",qu,"piu: ",thr, "lambda: ", l," PCERU:", pcer,"\n")
+		}
+		if(l==1 & thr > ss.thr[2]){ 
+			while(pcer < pcer.max){
+				pcer <- pcer + 0.01
+				err <- pcer * n
+				thr <- ((qu^2/(err*n))+1)/2
+				if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
+			}
+			if(verbose>1) cat("qu:",qu,"piu: ",thr, "lambda: ", l," PCERU:", pcer,"\n")
+		}
 		#if(thr==0.5 & l==length(lambdas))break
 		#if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
@@ -207,7 +216,7 @@ updateu.pw <- function(X, v0, r.steps, pcer, ss.thr, size, gamm, r.negcorr, l=NU
 	uc <- rep(0,p)
 	delta <- lambda/(abs(ols)^gamm)  
 	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	if(!r.negcorr) uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0
+	if(!r.negcorr) uc[which(sign(uc) != names(which.max(table(sign(uc))))) ] <- 0
 	probpath <- rowMeans(temp!=0)
 	return(list(uc,probpath,stop,l,thr))
 }
@@ -232,12 +241,12 @@ u.steps <- function(ss,ss.index,v0,X,lambda,gamm){
 	delta <- lambda/(abs(ols)^gamm)                      #adaptive lasso 
 	#delta <- lambda * runif(length(ols),gamm,1)       #randomised lasso
 	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0
+	uc[which(sign(uc) != names(which.max(table(sign(uc))))) ] <- 0
 	uc[is.na(uc)] <- 0
 	return(uc)
 }	
 
-updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, gamm, c.negcorr, l=NULL, G=10, verbose){
+updatev.pw <- function(X, u0, c.steps, pcer,pcer.max, ss.thr,size, gamm, c.negcorr, l=NULL, G=10, verbose){
 	p <- nrow(X)
 	n <- ncol(X)
 	err <- pcer * n
@@ -260,17 +269,26 @@ updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, gamm, c.negcorr, l=NUL
 			thr <- ((qv^2/(err*n))+1)/2
 		}
 		if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ", l,"\n")
-		#if(l == length(lambdas) & thr < ss.thr[1] | l==1 & thr > ss.thr[2]){ 
-		#	while(TRUE){
-		#		pcer <- pcer + 0.01
-		#		err <- pcer * n
-		#		thr <- ((qv^2/(err*n))+1)/2
-		#		if(thr >= ss.thr[1] & thr <= ss.thr[2]||pcer>=0.5)break 
-		#	}
-		#	if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ",l," PCER:", pcer,"\n")
-		#}
+		if(l == length(lambdas) & thr < ss.thr[1]){ 
+			while(pcer > 0.02){
+				pcer <- pcer - 0.01
+				err <- pcer * p
+				thr <- ((qv^2/(err*p))+1)/2
+				if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
+			}
+			if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ",l," PCERV:", pcer,"\n")
+		}
+		if( l==1 & thr > ss.thr[2]){ 
+			while(pcer < pcer.max){
+				pcer <- pcer + 0.01
+				err <- pcer * p
+				thr <- ((qv^2/(err*p))+1)/2
+				if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
+			}
+			if(verbose>1) cat("qv:",qv,"piv: ",thr,"lambda: ",l," PCERV:", pcer,"\n")
+		}
 		#	if(thr==0.5 & l==length(lambdas))break
-	#	if(thr==0.5) l  <- length(lambdas)
+	    #	if(thr==0.5) l  <- length(lambdas)
 		if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
 		if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
 		if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
@@ -281,7 +299,7 @@ updatev.pw <- function(X, u0, c.steps, pcer, ss.thr,size, gamm, c.negcorr, l=NUL
 	vc <- rep(0,n)
 	delta <- lambda/(abs(ols)^gamm) 
 	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	if(!c.negcorr) vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
+	if(!c.negcorr) vc[which(sign(vc) != names(which.max(table(sign(vc))))) ] <- 0 
 	probpath <- rowMeans(temp!=0)
 	return(list(vc,probpath,stop,l,thr))
 }
@@ -304,7 +322,7 @@ v.steps <- function(ss,ss.index,u0,X,lambda,gamm){
 	delta <- lambda/(abs(ols)^gamm)                      #adaptive lasso 
 	#delta <- lambda * runif(length(ols),gamm,1)       #randomised lasso
 	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
+	vc[which(sign(vc) != names(which.max(table(sign(vc))))) ] <- 0 
 	vc[is.na(vc)] <- 0
 	return(vc)
 }	

@@ -5,13 +5,14 @@ s4vd <- function(
 		,iter=50	        # maximal number of iterations to fit a single bicluster	
 		,ss.thr=0.6         # cutoff threshold (relative selection frequency) for the stability selection
 		,size=0.5           # size of the subsamples for the stability selection
-		,weak=0.6           # weakness parameter for the randomised lasso
+		,gamm=1             # adaptive lasso
+		,randomlasso=FALSE
 		,r.overlap=TRUE     # allow bicluster to be column overlapping
 		,c.overlap=TRUE     # allow bicluster to be row overlapping		
 		,r.negcorr=TRUE     # allow for negative correlation of rows (genes) over columns (samples)  
 		,c.negcorr=FALSE    # allow for negative correlation of columns (samples) over rows (genes)
 		,nbiclust=20        # maximal number of biclusters
-		,merr=0.1           # convergence parameter 
+		,merr=0.05          # convergence parameter 
 		,mc.cores=1         # number of cores for parallelization, computes the complete path
 ){
 	startX <- X
