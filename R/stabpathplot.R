@@ -1,48 +1,43 @@
-stabpath <- function(res,k){
-	par(mfrow=c(1,2),omi=c(.1,.1,.3,.1)) 
-	if(class(res@info$Rspath[[k]])=="numeric"){
-		cols <- ifelse(res@info$ul[[k]]==0,"black","red")
-		plot(res@info$Rspath[[k]],ylim=c(0,1),col=cols,yaxp=c(0.1,1,9),ylab=paste("selection probability"),xlab="rows")
-		abline(h=0.5,col="black",lwd=1,lty=2)
-		abline(h=res@info$thrs[[k]][2],col="red",lwd=3)
-		title(paste(sum(res@info$ul[[k]]!=0)," rows"))
-		text(x=nrow(res@RowxNumber)*0.9,y=res@info$thrs[[k]][2]+0.05,labels=expression(paste(pi[thr])),col="red",cex=1.5)
-		cols <- ifelse(res@info$vl[[k]]==0,"black","red")
-		plot(res@info$Cspath[[k]],ylim=c(0,1),col=cols,yaxp=c(0.1,1,9),ylab=paste("selection probability"),xlab="cols")
-		abline(h=0.5,col="black",lwd=1,lty=2)
-		abline(h=res@info$thrs[[k]][1],col="red",lwd=3)
-		title(paste(sum(res@info$vl[[k]]!=0)," cols"))
-		text(x=ncol(res@NumberxCol)*0.9,y=res@info$thrs[[k]][1]+0.05,labels=expression(paste(pi[thr])),col="red",cex=1.5)
-		title(paste("pointwise selection probabilities for bicluster",k," PCER: ",res@Parameters$pcer),outer=T)
-	}else{
-	lRpath <- min(which(apply(res@info$Rspath[[k]],1,is.na)),ncol(res@info$Rspath[[k]]))
-	cols <- ifelse(res@info$ul[[k]]==0,"black","red")
-	if(k>res@Number) cols <- rep("black",length(res@info$ul))
-	matplot(t(res@info$Rspath[[k]])[1:lRpath,],type="l",xlab=expression(paste(lambda[u])),
-			ylab=paste("selection probability"),
-			axes=T,lty=1,col=cols,ylim=c(0,1))
-	#axis(1,labels=FALSE)
-	#axis(2)
-	title(paste(sum(res@info$ul[[k]]!=0)," rows"))
-	abline(h=res@Parameters$ss.thr,col="red",lwd=3)
-	text(x=lRpath/10,y=res@Parameters$ss.thr+0.05,labels=expression(paste(pi[thr])),col="red",cex=1.5)
-	lCpath <- min(which(apply(res@info$Cspath[[k]],1,is.na)),ncol(res@info$Cspath[[k]]))
-	cols <- ifelse(res@info$vl[[k]]==0,"black","red")
-	if(k>res@Number) cols <- rep("black",length(res@info$vl))
-	matplot(t(res@info$Cspath[[k]])[1:lCpath,],type="l",xlab=expression(paste(lambda[v])),
-			ylab=paste("selection probability"),
-			axes=T,lty=1,col=cols,ylim=c(0,1))
-	#axis(1,labels=FALSE)
-	#axis(2)
-	title(paste(sum(res@info$vl[[k]]!=0)," columns"))
-	abline(h=res@Parameters$ss.thr,col="red",lwd=3)
-	text(x=lCpath/10,y=res@Parameters$ss.thr+0.05,labels=expression(paste(pi[thr])),col="red",cex=1.5)
-	if(k>res@Number){
-	title(paste("stability path bicluster",k," (not stable!)"),outer=T)	
-	}else{
-	title(paste("stability path bicluster",k," PCER: ",res@Parameters$pcer),outer=T)
-	}
-	}
-	par(mfrow=c(1,1))
+stabpath <- function(res,number){
+	vc <- res@info[[number]][[1]]
+	uc <- res@info[[number]][[2]]
+	par(mfrow=c(1,2),omi=c(0.25, 0.25, 0.5, 0.25)) #c(bottom, left, top, right)
+	n <- length(vc$qs)-1
+	p <- length(uc$qs)-1
+	pcer <- res@Parameters$pcer
+	lv <- res@info[[number]][[1]]$l 
+	lu <- res@info[[number]][[2]]$l
+	thrv <- ((vc[[4]]^2/((n*pcer)*n))+1)/2
+	thrv1 <- ((vc[[4]]^2/((n*pcer*2)*n))+1)/2
+	thrv2 <- ((vc[[4]]^2/((n*0.5)*n))+1)/2
+	redv <- which(vc[[2]][,lv]>thrv[lv])
+	orangev <- which(vc[[2]][,lv]>thrv1[lv])
+	greenv <- which(vc[[2]][,lv]>thrv2[lv])
+	thru <- ((uc[[4]]^2/((p*pcer)*p))+1)/2
+	thru1 <- ((uc[[4]]^2/((p*pcer*2)*p))+1)/2
+	thru2 <- ((uc[[4]]^2/((p*0.5)*p))+1)/2
+	redu <- which(uc[[2]][,lu]>thru[lu])
+	orangeu <- which(uc[[2]][,lu]>thru1[lu])
+	greenu <- which(uc[[2]][,lu]>thru2[lu])
+	colsv <- rep("black",n)
+	colsu <- rep("black",p)
+	colsv[redv] <- "red"
+	colsv[orangev] <- ifelse(colsv[orangev]=="black","orange",colsv[orangev])
+	colsv[greenv] <- ifelse(colsv[greenv]=="black","green",colsv[greenv])
+	colsu[redu] <- "red"
+	colsu[orangeu] <- ifelse(colsu[orangeu]=="black","orange",colsu[orangeu])
+	colsu[greenu] <- ifelse(colsu[greenu]=="black","green",colsu[greenu])
+	matplot(t(vc[[2]]),type="l",col=colsv,lty=1,ylab="selection probability",xlab=expression(paste(lambda[v])),main="stability path columns",ylim=c(0,1))
+	abline(v=lv,col="darkred",lwd=2)
+	lines(thrv,col="darkred",lwd=3,lty=2)
+	lines(thrv1,col="darkorange",lwd=3,lty=2)
+	lines(thrv2,col="darkgreen",lwd=3,lty=2)
+	legend(-(n*0.15), 1, c(paste("PCER ",pcer), paste("PCER ",pcer*2), "PCER 0.5"),text.col = c("darkred","darkorange","darkgreen"),bty="n")
+	matplot(t(uc[[2]]),type="l",col=colsu,lty=1,ylab="selection probability",xlab=expression(paste(lambda[u])),main="stability path rows",ylim=c(0,1))
+	abline(v=lu,col="darkred",lwd=2)
+	lines(thru,col="darkred",lwd=3,lty=2)
+	lines(thru1,col="darkorange",lwd=3,lty=2)
+	lines(thru2,col="darkgreen",lwd=3,lty=2)
+	legend(-(p*0.15), 1, c(paste("PCER ",pcer), paste("PCER ",pcer*2), "PCER 0.5"),text.col = c("darkred","darkorange","darkgreen"),bty="n")
+	title(paste("Stability Paths Bicluster: ",number),outer=T)
 }
-
