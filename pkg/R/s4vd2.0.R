@@ -5,13 +5,13 @@
 s4vd <- function(
 		X,
 		steps = 100,
-		size = 0.5,
 		pcer = 0.1,
-		ss.thr = c(0.7,0.8),
-		gamm =1,
-		iter = 20,
+		ss.thr = c(0.6,0.8),
+		size = 0.5,
+		gamm = 0,
+		iter = 100,
 		nbiclust = 20,
-		merr = 0.05,
+		merr = 0.001,
 		cols.nn=FALSE,
 		rows.nn=TRUE,
 		row.overlap=TRUE,
@@ -20,7 +20,6 @@ s4vd <- function(
 		pointwise=TRUE
 ){
 	startX <- X
-	number <- FALSE
 	p <- nrow(X)
 	n <- ncol(X)
 	rowsin <- rep(TRUE,p)	
@@ -116,7 +115,7 @@ s4vd <- function(
 			break
 		}
 	}
-	if(!number) number <- k
+	if(!stop) number <- k
 	params <- list(steps = steps, pcer=pcer, iter=iter, ss.thr=ss.thr, size=size, gamm=gamm, row.overlap=row.overlap, col.overlap=col.overlap,
 			rows.nn=rows.nn, cols.nn=cols.nn, nbiclust=nbiclust, merr=merr)
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
@@ -247,6 +246,7 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
 	qs <- numeric(length(lambdas))
 	thrall <- numeric(length(lambdas))
+	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
 	if(cols.nnc){
@@ -256,10 +256,34 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 			selprobpath[,l] <- rowMeans(temp!=0)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
 			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
-			if(l==length(lambdas)&thrall[l]==0.5)break
-			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2])break 
-			if(thrall[l] < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
-			if(thrall[l] > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
 		}
 	}else{
 		for(g in 1:(length(lambdas))){
@@ -268,19 +292,53 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 			selprobpath[,l] <- rowMeans(temp!=0)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
 			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
-			if(l==length(lambdas)&thrall[l]==0.5)break
-			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2])break 
-			if(thrall[l] < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
-			if(thrall[l] > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
 		}
 	}
-	thr <- thrall[l]
-	stable <- which(rowMeans(temp!=0)>=thr)
+	thr <- thrall[ls]
+	if(thr > ss.thr[2]){
+		while(pcer <= 0.5){
+			pcer <- pcer + 0.01	
+			thrall <- ((qs^2/((pcer*n)*n))+1)/2
+			thr <- thrall[ls]
+			if(thr < ss.thr[2]){
+				cat("PCERV: ",pcer,"\n")
+				break}
+		}
+	} 
+	stable <- which(selprobpath[,ls]>=thr)
 	if(length(stable)==0)stop <- TRUE
 	vc <- rep(0,n)
 	delta <- lambdas[l]/(abs(ols)^gamm)  
 	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	return(list(vc=vc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=l))
+	return(list(vc=vc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
 }
 
 
@@ -294,6 +352,7 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
 	qs <- numeric(length(lambdas)) 
 	thrall <- numeric(length(lambdas))
+	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
 	if(rows.nnc){
@@ -302,11 +361,35 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 			qs[l] <- mean(colSums(temp!=0))
 			selprobpath[,l] <- rowMeans(temp!=0)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
-			cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
-			if(l==length(lambdas)&thrall[l]==0.5)break
-			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2])break 
-			if(thrall[l] < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
-			if(thrall[l] > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
+			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
 		}
 	}else{
 		for(g in 1:(length(lambdas))){
@@ -314,20 +397,54 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 			qs[l] <- mean(colSums(temp!=0))
 			selprobpath[,l] <- rowMeans(temp!=0)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
-			cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
-			if(l==length(lambdas)&thrall[l]==0.5)break
-			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2])break 
-			if(thrall[l] < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
-			if(thrall[l] > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
+			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
+		if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+			ls <- l
+			break
+		} 
+		if(thrall[l] < ss.thr[1]){
+			if(l == length(lambdas))break
+			if(thrall[l+1]> ss.thr[2]){
+				ls <- l+1
+				break
+			}
+			l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+			while(thrall[l]!=0){ 
+				l <- l-1
+				if(l == 0)break
+			} 
+		}
+		if(thrall[l] > ss.thr[2]){ 
+			if(l == 0)break
+			if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+				ls <- l
+				break
+			}
+			l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+			while(thrall[l]!=0){ 
+				l <- l+1
+				if(l == length(l))break
+			} 
+		}
 		}
 	}
 	thr <- thrall[l]
-	stable <- which(rowMeans(temp!=0)>=thr)
+	if(thr > ss.thr[2]){
+		while(pcer <= 0.5){
+			pcer <- pcer + 0.01	
+			thrall <- ((qs^2/((pcer*p)*p))+1)/2
+			thr <- thrall[ls]
+			if(thr < ss.thr[2]){
+				cat("PCERU: ",pcer,"\n")
+				break}
+		}
+	} 
+	stable <- which(selprobpath[,ls]>=thr)
 	if(length(stable)==0)stop <- TRUE
 	uc <- rep(0,p)
 	delta <- lambdas[l]/(abs(ols)^gamm)  
 	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=l))
+	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
 }
 
 #adaptive Lasso 
