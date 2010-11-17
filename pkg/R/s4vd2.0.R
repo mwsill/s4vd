@@ -16,6 +16,8 @@ s4vd <- function(
 		rows.nn=TRUE,
 		row.overlap=TRUE,
 		col.overlap=TRUE,
+		row.min=4,
+		col.min=4,
 		fullpath=FALSE,
 		pointwise=TRUE
 ){
@@ -92,6 +94,7 @@ s4vd <- function(
 		Rows[[k]] <- rows
 		Cols[[k]] <- cols
 		info[[k]] <- list(vc,uc)
+		if(sum(u0!=0)<row.min|sum(v0!=0)<col.min) stop <- TRUE
 		if(!row.overlap){
 			rowsin[rows] <- FALSE
 			X <- startX[rowsin,colsin]
