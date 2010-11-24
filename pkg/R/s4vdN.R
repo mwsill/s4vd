@@ -10,62 +10,40 @@ source("~/workspace/s4vdsim/datagen.R")
 source("~/workspace/s4vd/pkg/R/ssvdBC.R")
 load("~/workspace/s4vdsim/epenHD.RData")
 source("~/workspace/s4vdsim/heatmap.r")
-setClass('BCs4vd',
-		contains = 'BiclustMethod',
-		prototype = prototype(
-				biclustFunction = function(X,...){s4vd(X,...)}))
-
-BCs4vd <- function() {
-	return(new('BCs4vd'))
-}
-
-
-#generate simulation data
-dat <- datagen(meanBC=1,nG=100,nC=50,BCG=10,BCC=5,sd=1)
-X <- dat[[1]]
-
-set.seed(12345)
-t1 <- system.time(res1 <- biclust(X,BCs4vd,pcer=0.05,iter=100,nbiclust=1,size=0.632,ss.thr = c(0.7,0.8),merr=0.0001,gamm=0))
-set.seed(12345)
-t2 <- system.time(res2 <- biclust(X,BCs4vd,pcer=0.05,iter=100,nbiclust=1,size=0.632,ss.thr = c(0.7,0.8),merr=0.0001,gamm=0,pointwise=F))
-set.seed(12345)
-t3 <- system.time(res3 <- biclust(X,BCs4vd,pcer=0.1,nbiclust=1,size=0.632,ss.thr = c(0.7,0.8),merr=0.001,gamm=0,pointwise=F,fullpath=TRUE))
-
-t1
-res1
-t2
-res2
-t3
-res3
-
-stabpath(res2,1)
-stabpath(res3,1)
 
 
 #ependymoma data
-par(mfrow=c(1,1))
+seed <- 24122010
 X <- t(scale(t(HDsel)))
+set.seed(seed)
+res5 <- s4vd(X,pcer=0.5,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
+set.seed(seed)
+res4 <- s4vd(X,pcer=0.4,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
+set.seed(seed)
+res3 <- s4vd(X,pcer=0.3,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
+set.seed(seed)
+res2 <- s4vd(X,pcer=0.2,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
+set.seed(seed)
+res25 <- s4vd(X,pcer=0.25,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
+set.seed(seed)
+res1 <- s4vd(X,pcer=0.1,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
+set.seed(seed)
+res15 <- s4vd(X,pcer=0.15,steps=500,c(0.6,0.65),nbiclust=10,merr=0.05,pointwise=TRUE,gamm=0,col.overlap=FALSE)
 
-set.seed(12345)
-t1 <- system.time(res1 <-  biclust(X,BCs4vd,pcer=0.1,iter=100,steps=500,nbiclust=10,size=0.632,ss.thr = c(0.6,0.7),merr=0.01,gamm=0,col.overlap=FALSE))
+
+
 library(marray)
-cols <- maPalette(low="blue",mid="white",high="red", k=50)
-heatmapBC(X,res1,order=T,outside=T,col=cols,axes=F)
+cols <-  maPalette(low = "blue", high = "red", mid="white", k =50)
+heatmapBC(X,res1,col=cols,order=TRUE)
+heatmapBC(X,res15,col=cols,order=TRUE)
+heatmapBC(X,res2,col=cols,order=TRUE)
+heatmapBC(X,res25,col=cols,order=TRUE)
+heatmapBC(X,res3,col=cols,order=TRUE)
+heatmapBC(X,res4,col=cols,order=TRUE)
+heatmapBC(X,res5,col=cols,order=TRUE)
 
 set.seed(12345)
-t2 <- system.time(res2 <-  biclust(X,BCs4vd,pcer=0.3,iter=100,steps=1000,nbiclust=10,size=0.632,ss.thr = c(0.6,0.7),merr=0.01,gamm=0,col.overlap=FALSE))
-heatmapBC(X,res2,number=1:res2@Number,order=T,outside=T,col=cols)
-
-set.seed(12345)
-t2 <- system.time(res3 <- s4vd(X,pcer=0.3,nbiclust=10,ss.thr = c(0.51,0.65),merr=0.05,gamm=0,col.overlap=FALSE))
-heatmapBC(X,res3,order=T,outside=T,col=cols)
-
-
-
-
-
-
-
+resnp <- s4vd(X,pcer=0.1,steps=300,nbiclust=10,merr=0.05,pointwise=FALSE,gamm=0)
 
 
 
@@ -116,171 +94,6 @@ title("Stability Paths",outer=T)
 
 
 
-
-
-debug(s4vd)
-
-
-
-X <- dat[[1]]
-steps <- 100
-size <- 0.5
-pcer <- 0.2
-ss.thr <- c(0.7,0.8)
-gamm <- 1
-iter <- 20
-verbose = 1
-merr = 0.001
-cols.nn=TRUE
-rows.nn=FALSE
-
-
-startX <- X
-number <- FALSE
-#us <- list(NULL,NULL,FALSE)
-p <- nrow(X)
-n  <- ncol(X)
-rowsin <- rep(TRUE,nrow(X))
-colsin <- rep(TRUE,ncol(X))
-stop <- FALSE
-Rspath <- Cspath <- Rows <- Cols <- ul <- vl <- thrs <- list()
-dl <- niter <- numeric()
-
-
-SVD <- svd(X,nu=1,nv=1)
-v0 <- SVD$v
-u0 <- SVD$u
-d0 <- SVD$d
-for(i in 1:iter){
-	vc <- updatev(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn)
-	v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
-	v1[is.na(v1)] <- 0
-	uc <- updateu(X,v1,pcer,ss.thr,steps,size,gamm,rows.nn)
-	u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
-	u1[is.na(u1)] <- 0
-	ud <- sqrt(sum((u0-u1)^2))
-	vd <- sqrt(sum((v0-v1)^2))
-	if(verbose > 0) cat("iter: ",i," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
-	r.in <- which(u1!=0)
-	c.in <- which(v1!=0)
-	v0 <- v1
-	u0 <- u1
-	if(min(c(vd,ud)) < merr)break
-}
-d1 <- as.numeric(t(u0)%*%X%*%v0)	
-
-
-#update u
-updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FALSE){
-	p <- nrow(X)
-	err <- pcer*p
-	ols <- X%*%v0
-	stop <- FALSE
-	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
-	qs <- numeric(length(lambdas)) 
-	if(rows.nnc){
-		for(l in 1:length(lambdas)){
-			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
-			thr <- ((qs[l]^2/(err*p))+1)/2
-			if(thr>=ss.thr[1]&!fullpath)break
-		}
-	}else{
-		for(l in 1:length(lambdas)){
-			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
-			thr <- ((qs[l]^2/(err*p))+1)/2
-			if(thr>=ss.thr[1]&!fullpath)break
-		}
-	}
-	thr <- ((qs^2/(err*p))+1)/2
-	l <- sum(thr < ss.thr[1])
-	thr <- thr[l]
-	stable <- which(rowMeans(temp!=0)>=thr)
-	if(length(stable)==0)stop <- TRUE
-	uc <- rep(0,p)
-	delta <- lambdas[l]/(abs(ols)^gamm)  
-	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=l))
-}
-
-#update u pointwise
-updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
-	p <- nrow(X)
-	err <- pcer*p
-	ols <- X%*%v0
-	stop <- FALSE
-	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
-	qs <- numeric(length(lambdas)) 
-	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
-	#search for a lambda
-	if(rows.nnc){
-		for(g in 1:(length(lambdas))){
-			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
-			thr <- ((qs[l]^2/(err*p))+1)/2
-			if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
-			if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
-			if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
-		}
-	}else{
-		for(g in 1:(length(lambdas))){
-			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
-			thr <- ((qs[l]^2/(err*p))+1)/2
-			if(thr >= ss.thr[1] & thr <= ss.thr[2])break 
-			if(thr < ss.thr[1]) l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1))) 
-			if(thr > ss.thr[2]) l <- max(1,l - ceiling(length(lambdas)/(g+1))) 
-		}
-	}
-	stable <- which(rowMeans(temp!=0)>=thr)
-	if(length(stable)==0)stop <- TRUE
-	uc <- rep(0,p)
-	delta <- lambdas[l]/(abs(ols)^gamm)  
-	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=l))
-}
-
-
-
-
-
-system.time(res1 <- updatev(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=T))
-system.time(res2 <- updatev.pw(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=T,l=NULL))
-
-thr1 <- ((vc[[4]]^2/((n*pcer)*n))+1)/2
-thr2 <- ((qus^2/(20*n))+1)/2
-thr3 <- ((qus^2/(30*n))+1)/2
-thr4 <- ((qus^2/(40*n))+1)/2
-thr5 <- ((qus^2/(50*n))+1)/2
-thr6 <- ((qus^2/(100*n))+1)/2
-matplot(t(vc[[2]]),type="l",col="black",lty=1)
-lines(thr1,col="blue",lwd=3)
-lines(thr2,col="blue",lwd=3)
-lines(thr3,col="blue",lwd=3)
-lines(thr4,col="blue",lwd=3)
-lines(thr5,col="blue",lwd=3)
-lines(thr6,col="blue",lwd=3)
-abline(h=ss.thr[1],col="red",lwd=3)
-abline(h=0.7,col="red",lwd=3)
-
-
-abline(v=sum(qus<qumax),col="red",lwd=3)
-#updatev
-ols <- t(X)%*%u0
-lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-#lambdas <- seq(max(abs(ols)),0,length.out = p+1)
-l <- 50
-
-temp <- adaLasso(t(X),u0,lambda[l],steps,size,gamm)
-qv <- mean(colSums(temp!=0))
-(((vc[[4]]^2/(10*n))+1)/2)[19]
 
 setwd("~/workspace/")
 pdf("stabpath.pdf",width=16,height=9)
