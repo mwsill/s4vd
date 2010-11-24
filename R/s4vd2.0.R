@@ -42,6 +42,7 @@ s4vd <- function(
 		v0 <- SVD$v
 		u0 <- SVD$u
 		d0 <- SVD$d
+		vc <- uc <- list()
 		if((length(u0)*size)<2|(length(v0)*size)<=2){
 			cat("submatrix to small for resampling","\n")
 			number <- k-1
