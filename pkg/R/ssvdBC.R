@@ -1,4 +1,3 @@
-
 ssvdBC <- function(X,K=10,threu = 1, threv = 1, gamu = 0, gamv =0 , merr = 10^(-4), niter = 100){
 		res <- list()
 		RowxNumber <- matrix(nrow=nrow(X),ncol=K)
