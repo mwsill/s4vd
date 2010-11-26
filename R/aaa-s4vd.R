@@ -1,17 +1,3 @@
-# TODO: Add comment
-# 
-# Author: Martin Sill
-###############################################################################
-
-# see flexclust package 
-#.onLoad <- function(libname, pkgname) {
-#	options("s4vd" =
-#					list(have_multicore = !inherits(try(loadNamespace("multicore"),
-#											silent=TRUE),
-#									"try-error")))
-#}
-
-
 setClass('BCs4vd',
 		contains = 'BiclustMethod',
 		prototype = prototype(

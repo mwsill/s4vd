@@ -1,29 +1,29 @@
 s4vd <- function(
-		X        		    # the p times n data matrix (p>>n)
-		,steps=100          # number of subsamples used to calculate the relative selection frequencies for left singular vector coefficients that correspond to the rows of X
-		,pcer=0.05          # expected number of falsly selected left singular vector coefficients 	
-		,iter=50	        # maximal number of iterations to fit a single bicluster	
-		,ss.thr=0.6         # cutoff threshold (relative selection frequency) for the stability selection
-		,size=0.5           # size of the subsamples for the stability selection
-		,gamm=1             # adaptive lasso
-		,randomlasso=FALSE
-		,r.overlap=TRUE     # allow bicluster to be column overlapping
-		,c.overlap=TRUE     # allow bicluster to be row overlapping		
-		,r.negcorr=TRUE     # allow for negative correlation of rows (genes) over columns (samples)  
-		,c.negcorr=FALSE    # allow for negative correlation of columns (samples) over rows (genes)
-		,nbiclust=20        # maximal number of biclusters
-		,merr=0.05          # convergence parameter 
-		,mc.cores=1         # number of cores for parallelization, computes the complete path
+		X,
+		steps = 100,
+		pcer = 0.1,
+		ss.thr = c(0.6,0.8),
+		size = 0.5,
+		gamm = 0,
+		iter = 100,
+		nbiclust = 20,
+		merr = 0.001,
+		cols.nn=FALSE,
+		rows.nn=TRUE,
+		row.overlap=TRUE,
+		col.overlap=TRUE,
+		row.min=4,
+		col.min=4,
+		fullpath=FALSE,
+		pointwise=TRUE
 ){
 	startX <- X
-	number <- FALSE
 	p <- nrow(X)
-	n  <- ncol(X)
-	rowsin <- rep(TRUE,nrow(X))
-	colsin <- rep(TRUE,ncol(X))
+	n <- ncol(X)
+	rowsin <- rep(TRUE,p)	
+	colsin <- rep(TRUE,n)
 	stop <- FALSE
-	Rspath <- Cspath <- Rows <- Cols <- ul <- vl <- list()
-	dl <- niter <- numeric()
+	info <- Rows <- Cols <- vc <- uc <- list()
 	for(k in 1:nbiclust){
 		cat("Bicluster",k,"\n")
 		rows <- rep(FALSE,nrow(startX))
@@ -34,222 +34,450 @@ s4vd <- function(
 		if(nrow(X)==0|ncol(X)==0){
 			break
 		}
-		Xsvd <- svd(X)
-		u0 <- u.ini <- Xsvd$u[,1]
-		v0 <- v.ini <- Xsvd$v[,1]
-		d0 <- d.ini <- Xsvd$d[1] 
+		SVD <- svd(X,nu=1,nv=1)
+		v0 <- SVD$v
+		u0 <- SVD$u
+		d0 <- SVD$d
+		vc <- uc <- list()
 		if((length(u0)*size)<2|(length(v0)*size)<=2){
 			cat("submatrix to small for resampling","\n")
 			number <- k-1
 			stop <- TRUE
 			break
 		}
-		for(e in 1:iter){
-			#cat(".")
-			vs <- updatev(X, u0, steps, c.err= pcer*ncol(X), ss.thr,size, weak, c.negcorr, mc.cores)
-			v1 <- vs[[1]]/sqrt(sum(vs[[1]]^2)) 
-			v1[is.na(v1)] <- 0
-			cat("cols: ",length(which(v1!=0)),"\n")
-			if(vs[[3]]){
-				stop <- TRUE
-				break
+		if(pointwise){
+			for(i in 1:iter){
+				vc <- updatev.pw(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn,vc$l)
+				v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
+				v1[is.na(v1)] <- 0
+				uc <- updateu.pw(X,v1,pcer,ss.thr,steps,size,gamm,rows.nn,uc$l)
+				u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
+				u1[is.na(u1)] <- 0
+				if(vc[[3]]|uc[[3]]){
+					stop <- TRUE
+					break}
+				ud <- sqrt(sum((u0-u1)^2))
+				vd <- sqrt(sum((v0-v1)^2))
+				cat("iter: ",i," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
+				r.in <- which(u1!=0)
+				c.in <- which(v1!=0)
+				v0 <- v1
+				u0 <- u1
+				if(min(c(vd,ud)) < merr)break
 			}
-			us <- updateu(X, v1, steps, r.err= pcer*nrow(X), ss.thr,size, weak, r.negcorr, mc.cores)
-			u1 <- us[[1]]/sqrt(sum(us[[1]]^2))
-			u1[is.na(u1)] <- 0
-			cat("rows: ",length(which(u1!=0)),"\n")
-			if(us[[3]]){
-				stop <- TRUE
-				break
+		}else{
+			for(i in 1:iter){
+				vc <- updatev(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn,fullpath)
+				v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
+				v1[is.na(v1)] <- 0
+				uc <- updateu(X,v1,pcer,ss.thr,steps,size,gamm,rows.nn,fullpath)
+				u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
+				u1[is.na(u1)] <- 0
+				if(vc[[3]]|uc[[3]]){
+					stop <- TRUE
+					break}
+				ud <- sqrt(sum((u0-u1)^2))
+				vd <- sqrt(sum((v0-v1)^2))
+				cat("iter: ",i," rows: ",length(which(u1!=0))," cols: ",length(which(v1!=0))," merr: ",min(c(ud,vd)),"\n")
+				r.in <- which(u1!=0)
+				c.in <- which(v1!=0)
+				v0 <- v1
+				u0 <- u1
+				if(min(c(vd,ud)) < merr)break
 			}
-			ud <- sqrt(sum((u0-u1)^2))
-			vd <- sqrt(sum((v0-v1)^2))
-			vm <- mean(abs(u0-u1))
-			um <- mean(abs(v0-v1))
-			cat("iter: ",e," merr: ",mean(c(ud,vd)),"\n")
-			cat("iter: ",e," merr: ",mean(c(um,vm)),"\n")
-			r.in <- which(u1!=0)
-			c.in <- which(v1!=0)
-			d1 <- as.numeric(t(u0)%*%X%*%v0)
-			v0 <- v1
-			u0 <- u1
-			d0 <- d1
-			#cat("iter: ",e," merr: ",min(vd,ud),"\n")
-			if(mean(c(vd,ud)) < merr){
-				cat("\n")
-				niter[k] <- e
-				Rspath[[k]] <- us[[2]]
-				Cspath[[k]] <- vs[[2]]
-				rows[rowsin] <- u0!=0
-				cols[colsin] <- v0!=0
-				Rows[[k]] <- rows
-				Cols[[k]] <- cols
-				ul[[k]] <- u0
-				vl[[k]] <- v0
-				dl[k] <- d0
-				if(!r.overlap){
-					rowsin[rows] <- FALSE
-					X <- startX[rowsin,colsin]
-				} 
-				if(!c.overlap){
-					colsin[cols] <- FALSE
-					X <- startX[rowsin,colsin]
-				} 
-				if(r.overlap&c.overlap){
-					X <- X - d0*u0%*%t(v0)
-				}
-				break
-			}
-			
+		}
+		rows[rowsin] <- u0!=0
+		cols[colsin] <- v0!=0
+		Rows[[k]] <- rows
+		Cols[[k]] <- cols
+		info[[k]] <- list(vc,uc)
+		if(sum(u0!=0)<row.min|sum(v0!=0)<col.min) stop <- TRUE
+		if(!row.overlap){
+			rowsin[rows] <- FALSE
+			X <- startX[rowsin,colsin]
+		} 
+		if(!col.overlap){
+			colsin[cols] <- FALSE
+			X <- startX[rowsin,colsin]
+		} 
+		if(row.overlap&col.overlap){
+			d0 <- as.numeric(t(u0)%*%X%*%v0)
+			X <- round(X - d0*u0%*%t(v0))
 		}
 		if(stop){
 			number <- k-1
-			cat("no further stable bicluster, increase pcer!","\n")
+			cat("no further stable bicluster, increase PCER!","\n")
 			break
 		}
-		if(e==iter){
+		if(i==iter){
 			number <- k-1
-			cat("bicluster not coverged, increase number of iterations!","\n")
+			cat("bicluster not coverged, increase merr or the number of iterations!","\n")
 			break
 		}
 	}
-	if(!number) number <- k
-	niter[k] <- e
-	Rspath[[k]] <- us[[2]]
-	Cspath[[k]] <- vs[[2]]
-	rows[rowsin] <- u0!=0
-	cols[colsin] <- v0!=0
-	Rows[[k]] <- rows
-	Cols[[k]] <- cols
-	ul[[k]] <- u0
-	vl[[k]] <- v0
-	dl[k] <- d0
-	params <- list(steps = steps, pcer=pcer, iter=iter, ss.thr=ss.thr, size=size, weak=weak, r.overlap=r.overlap, c.overlap=c.overlap,
-			r.negcorr=r.negcorr, c.negcorr=c.negcorr, nbiclust=nbiclust, merr=merr)
+	if(!stop) number <- k
+	params <- list(steps = steps, pcer=pcer, iter=iter, ss.thr=ss.thr, size=size, gamm=gamm, row.overlap=row.overlap, col.overlap=col.overlap,
+			rows.nn=rows.nn, cols.nn=cols.nn, nbiclust=nbiclust, merr=merr)
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
 	Number <- number
-	info <- list(ul=ul,vl=vl,dl=dl,Rspath=Rspath,Cspath=Cspath,niter=niter)
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
 
-updateu <- function(X, v0, r.steps, r.err, ss.thr,size, weak, r.negcorr, mc.cores){
-	p <- nrow(X)
+
+#update v
+updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,fullpath=FALSE){
 	n <- ncol(X)
-	ols <- X%*%v0
-	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	#lambdas <- seq(max(abs(ols)),0,length.out=n+1)
-	lpath <- length(lambdas)    
-	qumax <- sqrt((r.err)*((2*ss.thr)-1)*p)
-	probpath <- matrix(nrow=p,ncol=lpath)
-	if(r.negcorr){
-		for(i in 1:lpath){
-			ss.index <- sapply(1:r.steps,function(x){sample(1:n,n*size)})
-			temp <- matrix(unlist((mclapply(1:r.steps,u.stepsnc,ss.index,v0,X,
-												lambda=lambdas[i],weak,mc.cores=mc.cores))),nrow=p)
-			qu <- mean(colSums(temp!=0))
-			if(qu>qumax){ 
-				break}
-			probpath[,i] <- rowMeans(temp!=0)
-		}
-	}else{
-		for(i in 1:lpath){
-			ss.index <- sapply(1:r.steps,function(x){sample(1:n,n*size)})
-			temp <- matrix(unlist((mclapply(1:r.steps,u.steps,ss.index,v0,X,
-												lambda=lambdas[i],weak,mc.cores=mc.cores))),nrow=p)
-			qu <- mean(colSums(temp!=0))
-			if(qu>qumax){
-				break}	
-			probpath[,i] <- rowMeans(temp!=0)
-		}
-	}
-	stable <- which(apply(probpath>=ss.thr,1,any))
-	stop <- FALSE
-	if(length(stable)==0) stop <- TRUE
-	uc <- rep(0,p)
-	uc[stable] <- (sign(ols)*(abs(ols)>=lambdas[i-1])*(abs(ols)-lambdas[i-1]))[stable]
-	if(!r.negcorr) uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0 
-	return(list(uc,probpath,stop))
-}
-
-u.stepsnc <- function(ss,ss.index,v0,X,lambda,weak){
-	ssX <- X[,ss.index[,ss]]
-	ssv0 <- v0[ss.index[,ss]]
-	ols <- ssX%*%ssv0
-	delta <- lambda * runif(length(ols),weak,1) 
-	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	return(uc)
-}	
-
-u.steps <- function(ss,ss.index,v0,X,lambda,weak){
-	ssX <- X[,ss.index[,ss]]
-	ssv0 <- v0[ss.index[,ss]]
-	ols <- ssX%*%ssv0
-	delta <- lambda * runif(length(ols),weak,1) 
-	uc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	uc[which(sign(uc) != sign(sum(sign(uc)))) ] <- 0 
-	return(uc)
-}	
-
-updatev <- function(X, u0, c.steps, c.err, ss.thr,size, weak, c.negcorr, mc.cores){
-	p <- nrow(X)
-	n <- ncol(X)
+	err <- pcer*n
 	ols <- t(X)%*%u0
+	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	#lambdas <- seq(max(abs(ols)),0,length.out=p+1)
-	lpath <- length(lambdas)
-	qv <- numeric(length(lambdas))
-	qvmax <- sqrt((c.err)*((2*ss.thr)-1)*n)
-	probpath <- matrix(nrow=n,ncol=lpath)
-	if(c.negcorr){
-		for(i in 1:lpath){
-			ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
-			temp <- matrix(unlist((mclapply(1:c.steps,v.stepsnc,ss.index,u0,X,
-												lambda=lambdas[i],weak,mc.cores=mc.cores))),nrow=n)
-			qv[i] <- mean(colSums(temp!=0))
-			if(qv[i]>qvmax){
-				break
+	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
+	qs <- numeric(length(lambdas))
+	thrall <- numeric(length(lambdas))
+	ls <- length(lambdas)
+	set <- FALSE
+	if(cols.nnc){
+		for(l in 1:length(lambdas)){
+			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
+			qs[l] <- mean(colSums(temp!=0))
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
+			if(thrall[l]>=ss.thr[1]){
+				if(!set){ ls <- l
+					set <- TRUE}
+				if(!fullpath)break
 			}
-			probpath[,i] <- rowMeans(temp!=0)
 		}
 	}else{
-		for(i in 1:lpath){
-			ss.index <- sapply(1:c.steps,function(x){sample(1:p,p*size)})
-			temp <- matrix(unlist((mclapply(1:c.steps,v.steps,ss.index,u0,X,
-												lambda=lambdas[i],weak,mc.cores=mc.cores))),nrow=n)
-			qv[i] <- mean(colSums(temp!=0))
-			if(qv[i]>qvmax){
-				break
+		for(l in 1:length(lambdas)){
+			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
+			qs[l] <- mean(colSums(temp!=0))
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
+			if(thrall[l]>=ss.thr[1]){
+				if(!set){ ls <- l
+					set <- TRUE}
+				if(!fullpath)break
 			}
-			probpath[,i] <- rowMeans(temp!=0)
 		}
 	}
-	stable <- which(apply(probpath>=ss.thr,1,any)) 
-	stop <- FALSE
-	if(length(stable)==0) stop <- TRUE
+	thr <- thrall[ls]
+	if(thr > ss.thr[2]){
+		while(pcer <= 0.5){
+			pcer <- pcer + 0.01	
+			thrall <- ((qs^2/((pcer*n)*n))+1)/2
+			thr <- thrall[ls]
+			if(thr < ss.thr[2])break
+		}
+	} 
+	stable <- which(selprobpath[,ls]>=thr)
+	if(length(stable)==0)stop <- TRUE
 	vc <- rep(0,n)
-	vc[stable] <- (sign(ols)*(abs(ols)>=lambdas[i-1])*(abs(ols)-lambdas[i-1]))[stable]
-	if(!c.negcorr) vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
-	return(list(vc,probpath,stop,qv))
+	delta <- lambdas[ls]/(abs(ols)^gamm)  
+	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
+	return(list(vc=vc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls))
+}
+
+#update u
+updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FALSE){
+	p <- nrow(X)
+	err <- pcer*p
+	ols <- X%*%v0
+	stop <- FALSE
+	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
+	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
+	qs <- numeric(length(lambdas))
+	thrall <- numeric(length(lambdas))
+	ls <- length(lambdas)
+	set <- FALSE
+	if(rows.nnc){
+		for(l in 1:length(lambdas)){
+			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
+			qs[l] <- mean(colSums(temp!=0))
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
+			if(thrall[l]>=ss.thr[1]){
+				if(!set){ ls <- l
+					set <- TRUE
+				}
+				if(!fullpath)break
+			}
+		}
+	}else{
+		for(l in 1:length(lambdas)){
+			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
+			qs[l] <- mean(colSums(temp!=0))
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
+			if(thrall[l]>=ss.thr[1]){
+				if(!set){ ls <- l
+					set <- TRUE
+				}
+				if(!fullpath)break
+			}
+		}
+	}
+	thr <- thrall[ls]
+	if(thr > ss.thr[2]){
+		while(pcer <= 0.5){
+			pcer <- pcer + 0.01	
+			thrall <- ((qs^2/((pcer*p)*p))+1)/2
+			thr <- thrall[ls]
+			if(thr < ss.thr[2])break
+		}
+	} 
+	stable <- which(selprobpath[,ls]>=thr)
+	if(length(stable)==0)stop <- TRUE
+	uc <- rep(0,p)
+	delta <- lambdas[ls]/(abs(ols)^gamm)  
+	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
+	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls))
+}
+
+#update v pointwise
+
+updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
+	n <- ncol(X)
+	err <- pcer*n
+	ols <- t(X)%*%u0
+	stop <- FALSE
+	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
+	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
+	qs <- numeric(length(lambdas))
+	thrall <- numeric(length(lambdas))
+	ls <- length(lambdas)
+	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
+	#search for a lambda
+	if(cols.nnc){
+		for(g in 1:(length(lambdas))){
+			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
+			qs[l] <- mean(colSums(temp!=0))
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
+			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
+		}
+	}else{
+		for(g in 1:(length(lambdas))){
+			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
+			qs[l] <- mean(colSums(temp!=0))
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
+			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
+		}
+	}
+	thr <- thrall[ls]
+	if(thr > ss.thr[2]){
+		while(pcer <= 0.5){
+			pcer <- pcer + 0.01	
+			thrall <- ((qs^2/((pcer*n)*n))+1)/2
+			thr <- thrall[ls]
+			if(thr < ss.thr[2]){
+				cat("PCERV: ",pcer,"\n")
+				break}
+		}
+	} 
+	stable <- which(selprobpath[,ls]>=thr)
+	if(length(stable)==0)stop <- TRUE
+	vc <- rep(0,n)
+	delta <- lambdas[l]/(abs(ols)^gamm)  
+	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
+	return(list(vc=vc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
 }
 
 
-v.stepsnc <- function(ss,ss.index,u0,X,lambda,weak){
-	ssX <- X[ss.index[,ss],]
-	ssu0 <- u0[ss.index[,ss]]
-	ols <- t(ssX)%*%ssu0
-	delta <- lambda * runif(length(ols),weak,1) 
-	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	return(vc)
-}	
+#update u pointwise
+updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
+	p <- nrow(X)
+	err <- pcer*p
+	ols <- X%*%v0
+	stop <- FALSE
+	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
+	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
+	qs <- numeric(length(lambdas)) 
+	thrall <- numeric(length(lambdas))
+	ls <- length(lambdas)
+	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
+	#search for a lambda
+	if(rows.nnc){
+		for(g in 1:(length(lambdas))){
+			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
+			t <- mean(colSums(temp!=0))
+			qs[l] <- mean(t)
+			rm(t)
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
+			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
+		}
+	}else{
+		for(g in 1:(length(lambdas))){
+			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
+			t <- mean(colSums(temp!=0))
+			qs[l] <- mean(t)
+			rm(t)
+			selprobpath[,l] <- rowMeans(temp!=0)
+			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
+			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
+			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
+				ls <- l
+				break
+			} 
+			if(thrall[l] < ss.thr[1]){
+				if(l == length(lambdas))break
+				if(thrall[l+1]> ss.thr[2]){
+					ls <- l+1
+					break
+				}
+				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l-1
+					if(l == 0)break
+				} 
+			}
+			if(thrall[l] > ss.thr[2]){ 
+				if(l == 0)break
+				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
+					ls <- l
+					break
+				}
+				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0){ 
+					l <- l+1
+					if(l == length(l))break
+				} 
+			}
+		}
+	}
+	thr <- thrall[l]
+	if(thr > ss.thr[2]){
+		while(pcer <= 0.5){
+			pcer <- pcer + 0.01	
+			thrall <- ((qs^2/((pcer*p)*p))+1)/2
+			thr <- thrall[ls]
+			if(thr < ss.thr[2]){
+				cat("PCERU: ",pcer,"\n")
+				break}
+		}
+	} 
+	stable <- which(selprobpath[,ls]>=thr)
+	if(length(stable)==0)stop <- TRUE
+	uc <- rep(0,p)
+	delta <- lambdas[l]/(abs(ols)^gamm)  
+	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
+	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
+}
 
-v.steps <- function(ss,ss.index,u0,X,lambda,weak){
-	ssX <- X[ss.index[,ss],]
-	ssu0 <- u0[ss.index[,ss]]
-	ols <- t(ssX)%*%ssu0
-	delta <- lambda * runif(length(ols),weak,1) 
-	vc <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
-	vc[which(sign(vc) != sign(sum(sign(vc)))) ] <- 0 
-	return(vc)
-}	
+#adaptive Lasso 
+adaLasso <- function(X,b,lambda,steps,size,gamm=0){
+	subsets <- sapply(1:steps,function(x){sample(1:length(b),length(b)*size)})
+	res <- sapply(1:steps,adaLassoSteps,subsets,X,b,lambda,gamm)
+	return(res)
+}
+adaLassoSteps <- function(index,subsets,X,b,lambda,gamm){
+	ols <- X[,subsets[,index]]%*%b[subsets[,index]]
+	delta <- lambda/(abs(ols)^gamm)                        
+	ols <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
+	ols[is.na(ols)] <- 0
+	return(ols)
+}
+adaLasso.nn <- function(X,b,lambda,steps,size,gamm=0){
+	subsets <- sapply(1:steps,function(x){sample(1:length(b),length(b)*size)})
+	res <- sapply(1:steps,adaLassoSteps.nn,subsets,X,b,lambda,gamm)
+	return(res)
+}
+adaLassoSteps.nn <- function(index,subsets,X,b,lambda,gamm){
+	ols <- X[,subsets[,index]]%*%b[subsets[,index]]
+	delta <- lambda/(abs(ols)^gamm)                        
+	ols <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
+	ols[is.na(ols)] <- 0
+	mostof <- sign(sum(sign(ols)))
+	if(mostof==0) mostof <- 1
+	ols[which(sign(ols) != mostof) ] <- 0
+	ols[is.na(ols)] <- 0
+	return(ols)
+}
 
