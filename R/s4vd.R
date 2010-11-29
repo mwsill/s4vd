@@ -130,7 +130,7 @@ s4vd <- function(
 
 
 #update v
-updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,fullpath=FALSE){
+updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn=FALSE,fullpath=FALSE){
 	n <- ncol(X)
 	err <- pcer*n
 	ols <- t(X)%*%u0
@@ -141,7 +141,7 @@ updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,fullpath=FAL
 	thrall <- numeric(length(lambdas))
 	ls <- length(lambdas)
 	set <- FALSE
-	if(cols.nnc){
+	if(cols.nn){
 		for(l in 1:length(lambdas)){
 			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
@@ -186,7 +186,7 @@ updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,fullpath=FAL
 }
 
 #update u
-updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FALSE){
+updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nn=FALSE,fullpath=FALSE){
 	p <- nrow(X)
 	err <- pcer*p
 	ols <- X%*%v0
@@ -197,7 +197,7 @@ updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FAL
 	thrall <- numeric(length(lambdas))
 	ls <- length(lambdas)
 	set <- FALSE
-	if(rows.nnc){
+	if(rows.nn){
 		for(l in 1:length(lambdas)){
 			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
@@ -245,7 +245,7 @@ updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FAL
 
 #update v pointwise
 
-updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
+updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn=FALSE,l=NULL){
 	n <- ncol(X)
 	err <- pcer*n
 	ols <- t(X)%*%u0
@@ -256,7 +256,7 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
-	if(cols.nnc){
+	if(cols.nn){
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
@@ -355,7 +355,7 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 
 
 #update u pointwise
-updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
+updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nn=FALSE,l=NULL){
 	p <- nrow(X)
 	err <- pcer*p
 	ols <- X%*%v0
@@ -366,7 +366,7 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
-	if(rows.nnc){
+	if(rows.nn){
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
