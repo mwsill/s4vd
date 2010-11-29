@@ -25,6 +25,7 @@ s4vd <- function(
 	stop <- FALSE
 	info <- Rows <- Cols <- vc <- uc <- list()
 	for(k in 1:nbiclust){
+		gc()
 		cat("Bicluster",k,"\n")
 		rows <- rep(FALSE,nrow(startX))
 		cols <- rep(FALSE,ncol(startX))
@@ -102,16 +103,18 @@ s4vd <- function(
 		} 
 		if(row.overlap&col.overlap){
 			d0 <- as.numeric(t(u0)%*%X%*%v0)
-			X <- round(X - d0*u0%*%t(v0))
+			X <- X - d0*u0%*%t(v0)
 		}
 		if(stop){
 			number <- k-1
 			cat("no further stable bicluster, increase PCER!","\n")
+			gc()
 			break
 		}
 		if(i==iter){
 			number <- k-1
 			cat("bicluster not coverged, increase merr or the number of iterations!","\n")
+			gc()
 			break
 		}
 	}
@@ -140,8 +143,9 @@ updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,fullpath=FAL
 	if(cols.nnc){
 		for(l in 1:length(lambdas)){
 			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
 			if(thrall[l]>=ss.thr[1]){
 				if(!set){ ls <- l
@@ -152,8 +156,9 @@ updatev <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,fullpath=FAL
 	}else{
 		for(l in 1:length(lambdas)){
 			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
 			if(thrall[l]>=ss.thr[1]){
 				if(!set){ ls <- l
@@ -194,8 +199,9 @@ updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FAL
 	if(rows.nnc){
 		for(l in 1:length(lambdas)){
 			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
 			if(thrall[l]>=ss.thr[1]){
 				if(!set){ ls <- l
@@ -207,8 +213,9 @@ updateu <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,fullpath=FAL
 	}else{
 		for(l in 1:length(lambdas)){
 			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
 			if(thrall[l]>=ss.thr[1]){
 				if(!set){ ls <- l
@@ -252,8 +259,9 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 	if(cols.nnc){
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
 			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
@@ -288,8 +296,9 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 	}else{
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
-			qs[l] <- mean(colSums(temp!=0))
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
 			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
@@ -358,10 +367,9 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 	if(rows.nnc){
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
-			t <- mean(colSums(temp!=0))
-			qs[l] <- mean(t)
-			rm(t)
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
 			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
@@ -396,10 +404,9 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 	}else{
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
-			t <- mean(colSums(temp!=0))
-			qs[l] <- mean(t)
-			rm(t)
-			selprobpath[,l] <- rowMeans(temp!=0)
+			t <- temp!=0
+			qs[l] <- mean(colSums(t))
+			selprobpath[,l] <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
 			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
