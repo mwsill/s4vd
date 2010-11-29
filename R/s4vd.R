@@ -1,7 +1,8 @@
 s4vd <- function(
 		X,
 		steps = 100,
-		pcer = 0.1,
+		pcerv = 0.1,
+		pceru = 0.5,
 		ss.thr = c(0.6,0.8),
 		size = 0.5,
 		gamm = 0,
@@ -48,10 +49,10 @@ s4vd <- function(
 		}
 		if(pointwise){
 			for(i in 1:iter){
-				vc <- updatev.pw(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn,vc$l)
+				vc <- updatev.pw(X,u0,pcerv,ss.thr,steps,size,gamm,cols.nn,vc$l)
 				v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
 				v1[is.na(v1)] <- 0
-				uc <- updateu.pw(X,v1,pcer,ss.thr,steps,size,gamm,rows.nn,uc$l)
+				uc <- updateu.pw(X,v1,pceru,ss.thr,steps,size,gamm,rows.nn,uc$l)
 				u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
 				u1[is.na(u1)] <- 0
 				if(vc[[3]]|uc[[3]]){
@@ -68,10 +69,10 @@ s4vd <- function(
 			}
 		}else{
 			for(i in 1:iter){
-				vc <- updatev(X,u0,pcer,ss.thr,steps,size,gamm,cols.nn,fullpath)
+				vc <- updatev(X,u0,pcerv,ss.thr,steps,size,gamm,cols.nn,fullpath)
 				v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
 				v1[is.na(v1)] <- 0
-				uc <- updateu(X,v1,pcer,ss.thr,steps,size,gamm,rows.nn,fullpath)
+				uc <- updateu(X,v1,pceru,ss.thr,steps,size,gamm,rows.nn,fullpath)
 				u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
 				u1[is.na(u1)] <- 0
 				if(vc[[3]]|uc[[3]]){
@@ -119,7 +120,7 @@ s4vd <- function(
 		}
 	}
 	if(!stop) number <- k
-	params <- list(steps = steps, pcer=pcer, iter=iter, ss.thr=ss.thr, size=size, gamm=gamm, row.overlap=row.overlap, col.overlap=col.overlap,
+	params <- list(steps = steps, pcerv=pcerv, pceru=pceru, iter=iter, ss.thr=ss.thr, size=size, gamm=gamm, row.overlap=row.overlap, col.overlap=col.overlap,
 			rows.nn=rows.nn, cols.nn=cols.nn, nbiclust=nbiclust, merr=merr)
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
@@ -250,7 +251,6 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 	ols <- t(X)%*%u0
 	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
 	qs <- numeric(length(lambdas))
 	thrall <- numeric(length(lambdas))
 	ls <- length(lambdas)
@@ -261,9 +261,8 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
-			selprobpath[,l] <- rowMeans(t)
+			sp <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
-			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
 				ls <- l
 				break
@@ -295,12 +294,11 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 		}
 	}else{
 		for(g in 1:(length(lambdas))){
-			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
+			temp <- adaLasso(t(X),u0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
-			selprobpath[,l] <- rowMeans(t)
+			sp <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*n))+1)/2
-			#cat("qv:",qs[l],"piv: ",thrall[l], "lambda: ", l," PCERv:", err/n,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
 				ls <- l
 				break
@@ -341,13 +339,18 @@ updatev.pw <- function(X,u0,pcer,ss.thr,steps,size,gamm,cols.nnc=FALSE,l=NULL){
 				cat("PCERV: ",pcer,"\n")
 				break}
 		}
-	} 
-	stable <- which(selprobpath[,ls]>=thr)
+	}
+	temp <- adaLasso(t(X),u0,lambdas[ls],steps,size,gamm)
+	t <- temp!=0
+	qs[ls] <- mean(colSums(t))
+	sp <- rowMeans(t)
+	thr <- ((qs[ls]^2/(err*n))+1)/2
+	stable <- which(sp>=thr)
 	if(length(stable)==0)stop <- TRUE
 	vc <- rep(0,n)
 	delta <- lambdas[l]/(abs(ols)^gamm)  
 	vc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	return(list(vc=vc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
+	return(list(vc=vc,selprobpath=sp,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
 }
 
 
@@ -358,7 +361,6 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 	ols <- X%*%v0
 	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
-	selprobpath <- matrix(nrow=length(ols),ncol=length(lambdas))
 	qs <- numeric(length(lambdas)) 
 	thrall <- numeric(length(lambdas))
 	ls <- length(lambdas)
@@ -369,9 +371,8 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
-			selprobpath[,l] <- rowMeans(t)
+			sp <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
-			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
 				ls <- l
 				break
@@ -403,10 +404,10 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 		}
 	}else{
 		for(g in 1:(length(lambdas))){
-			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
+			temp <- adaLasso(X,v0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
-			selprobpath[,l] <- rowMeans(t)
+			sp <- rowMeans(t)
 			thrall[l] <- ((qs[l]^2/(err*p))+1)/2
 			#cat("qu:",qs[l],"piu: ",thrall[l], "lambda: ", l," PCERu:", err/p,"\n")
 			if(thrall[l] >= ss.thr[1] & thrall[l] <= ss.thr[2]){
@@ -450,12 +451,17 @@ updateu.pw <- function(X,v0,pcer,ss.thr,steps,size,gamm,rows.nnc=FALSE,l=NULL){
 				break}
 		}
 	} 
-	stable <- which(selprobpath[,ls]>=thr)
+	temp <- adaLasso(X,v0,lambdas[ls],steps,size,gamm)
+	t <- temp!=0
+	qs[ls] <- mean(colSums(t))
+	sp <- rowMeans(t)
+	thrall[ls] <- ((qs[ls]^2/(err*p))+1)/2
+	stable <- which(sp>=thr)
 	if(length(stable)==0)stop <- TRUE
 	uc <- rep(0,p)
 	delta <- lambdas[l]/(abs(ols)^gamm)  
 	uc[stable] <- (sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta))[stable]
-	return(list(uc=uc,selprobpath=selprobpath,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
+	return(list(uc=uc,selprobpath=sp,stop=stop,qs=qs,thr=thr,l=ls,delta=delta))
 }
 
 #adaptive Lasso 
