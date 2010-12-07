@@ -13,7 +13,7 @@ setClass('BCssvd',
 		prototype = prototype(
 				biclustFunction = function(X,...){ssvdBC(X,...)}))
 
-BCs4vd <- function() {
+BCssvd <- function() {
 	return(new('BCssvd'))
 }
 
