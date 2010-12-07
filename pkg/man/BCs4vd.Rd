@@ -9,56 +9,83 @@ Biclustering via sparse singular value decomposition incorporating stability sel
 The function performs the a biclustering of the data matrix by sparse singular value decomposition with a nested stability selection
 }
 \usage{
-s4vd(X, r.steps = 500, c.steps = 500, r.err = 20, c.err = 10, iter = 50, ss.thr = 0.8, size = 0.5, weak = 0.2, r.overlap = TRUE, c.overlap = FALSE, r.negcorr = TRUE, c.negcorr = FALSE, nbiclust = 50, merr = 0.01, mc.cores = 4)
+\S4method{biclust}{matrix,BCs4vd}(x, method=BCs4vd(),
+		steps = 100,
+		pcerv = 0.05,
+		pceru = 0.05,
+		ss.thr = c(0.6,0.65),
+		size = 0.632,
+		gamm = 0,
+		iter = 100,
+		nbiclust = 10,
+		merr = 0.0001,
+		cols.nc=FALSE,
+		rows.nc=TRUE,
+		row.overlap=TRUE,
+		col.overlap=TRUE,
+		row.min=4,
+		col.min=4,
+		pointwise=TRUE,
+		start.iter=0,
+		savepath=FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{X}{
+  \item{x}{
 the matrix to be clustered
 }
-  \item{r.steps}{
-number of subsamples to calculate the relative selection frequencies of the left singular vector coefficients that correspond to the rows of X
+  \item{steps}{
+number of subsamples used to perform the stability selection
 }
-  \item{c.steps}{
-number of subsamples to calculate the relative selection frequencies of the right singular vector coefficients that correspond to the columns of X	
+  \item{pcerv}{
+per comparsion wise error rate to control the number of falsely selected right singular vector coefficients (columns/samples)
 }
-  \item{r.err}{
-expected number of falsely selected left singular vector coefficients 	
+  \item{pceru}{
+per comparsion wise error rate to control the number of falsely selected left singular vector coefficients (rows/genes)
 }
-  \item{c.err}{
-expected number of falsely selected right singular vector coefficients
+  \item{ss.thr}{
+range of the cutoff threshold (relative selection frequency) for the stability selection
+}
+  \item{size}{
+size of the subsamples used to perform the stability selection  
+}
+  \item{gamm}{
+weight parameter for the adaptive LASSO, nonnegative constant (default = 0, LASSO)
 }
   \item{iter}{
 maximal number of iterations to fit a single bicluster
 }
-  \item{ss.thr}{
-cutoff threshold (relative selection frequency) for the stability selection
-}
-  \item{size}{
-size of the subsamples for the stability selection
-}
-  \item{weak}{
-weakness parameter for the randomised lasso
-}
-  \item{r.overlap}{
-allow bicluster to be row overlapping
-}
-  \item{c.overlap}{
-allow bicluster to be column overlapping
-}
-  \item{r.negcorr}{
-allow for negative correlation of rows (genes) over columns (samples)
-}
-  \item{c.negcorr}{
-allow for negative correlation of columns (samples) over rows (genes)
-}
   \item{nbiclust}{
-maximal number of biclusters
+maximal number of biclusters 
 }
   \item{merr}{
-convergence parameter
+threshold to decide convergence 
 }
-  \item{mc.cores}{
+  \item{cols.nc}{
+allow for negative correlation of columns (samples) over rows (genes)
+}
+  \item{rows.nc}{
+allow for negative correlation of rows (genes) over columns (samples)
+}
+  \item{row.overlap}{
+allow rows to overlap between biclusters 
+}
+  \item{col.overlap}{
+allow columns to overlap between biclusters 
+}
+  \item{row.min}{
+minimal number of rows
+}
+  \item{col.min}{
+minimal number of columns
+}
+  \item{pointwise}{
+
+}
+  \item{start.iter}{
+number 
+}
+  \item{savepath}{
 number of cores for parallelization
 }
 }
