@@ -38,7 +38,7 @@
 ssvd = function(X,threu = 1, threv = 1, gamu = 0, gamv =0,  u0 = svd(X)$u[,1], v0 = svd(X)$v[,1], merr = 10^(-4), niter = 100){
     n = dim(X)[1]
     d = dim(X)[2]
-
+	stop <- FALSE
     ud = 1;
     vd = 1;
     iter = 0;
@@ -111,6 +111,7 @@ ssvd = function(X,threu = 1, threv = 1, gamu = 0, gamv =0,  u0 = svd(X)$u[,1], v
 
         if (iter > niter){
         print("Fail to converge! Increase the niter!")
+		stop <- TRUE
 	  break
         }
         
@@ -118,5 +119,5 @@ ssvd = function(X,threu = 1, threv = 1, gamu = 0, gamv =0,  u0 = svd(X)$u[,1], v
 	v0 = v1;
     }
 
-return(list(u = u1, v = v1, iter = iter))
+return(list(u = u1, v = v1, iter = iter,stop=stop))
 }
