@@ -9,8 +9,8 @@ s4vd <- function(
 		iter = 100,
 		nbiclust = 10,
 		merr = 0.0001,
-		cols.nn=FALSE,
-		rows.nn=TRUE,
+		cols.nc=FALSE,
+		rows.nc=TRUE,
 		row.overlap=TRUE,
 		col.overlap=TRUE,
 		row.min=4,
@@ -53,10 +53,10 @@ s4vd <- function(
 		if(pointwise){
 			for(i in 1:iter){
 				if(i > start.iter) start <- FALSE
-				uc <- updateu.pw(X,v0,pceru,p.ini,ss.thr,steps,size,gamm,rows.nn,uc$l)
+				uc <- updateu.pw(X,v0,pceru,p.ini,ss.thr,steps,size,gamm,rows.nc,uc$l)
 				u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
 				u1[is.na(u1)] <- 0
-				vc <- updatev.pw(X,u1,pcerv,n.ini,ss.thr,steps,size,gamm,cols.nn,vc$l)
+				vc <- updatev.pw(X,u1,pcerv,n.ini,ss.thr,steps,size,gamm,cols.nc,vc$l)
 				v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
 				v1[is.na(v1)] <- 0
 				if(uc[[3]] & i > start.iter){
@@ -78,10 +78,10 @@ s4vd <- function(
 		}else{
 			for(i in 1:iter){
 				if(i > start.iter) start <- FALSE
-				uc <- updateu(X,v0,pceru,p.ini,ss.thr,steps,size,gamm,rows.nn,savepath)
+				uc <- updateu(X,v0,pceru,p.ini,ss.thr,steps,size,gamm,rows.nc,savepath)
 				u1 <- uc[[1]]/sqrt(sum(uc[[1]]^2)) 
 				u1[is.na(u1)] <- 0
-				vc <- updatev(X,u1,pcerv,n.ini,ss.thr,steps,size,gamm,cols.nn,savepath)
+				vc <- updatev(X,u1,pcerv,n.ini,ss.thr,steps,size,gamm,cols.nc,savepath)
 				v1 <- vc[[1]]/sqrt(sum(vc[[1]]^2)) 
 				v1[is.na(v1)] <- 0
 				if(uc[[3]] & i > start.iter){
@@ -146,7 +146,7 @@ s4vd <- function(
 	}
 	if(!stop) number <- k
 	params <- list(steps = steps, pcerv=pcerv, pceru=pceru, iter=iter, ss.thr=ss.thr, size=size, gamm=gamm, row.overlap=row.overlap, col.overlap=col.overlap,
-			rows.nn=rows.nn, cols.nn=cols.nn, nbiclust=nbiclust, merr=merr, row.min=row.min, col.min=col.min, pointwise=pointwise, start.iter=start.iter, savepath=savepath, Call=MYCALL)  
+			rows.nc=rows.nc, cols.nc=cols.nc, nbiclust=nbiclust, merr=merr, row.min=row.min, col.min=col.min, pointwise=pointwise, start.iter=start.iter, savepath=savepath, Call=MYCALL)  
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
 	Number <- number
@@ -155,7 +155,7 @@ s4vd <- function(
 
 
 #update v
-updatev <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,savepath=FALSE){
+updatev <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,savepath=FALSE){
 	n <- ncol(X)
 	err <- pcer*n.ini
 	err*n
@@ -166,9 +166,9 @@ updatev <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,savepat
 	qs <- numeric(length(lambdas))
 	thrall <- numeric(length(lambdas))
 	ls <- length(lambdas)
-	if(cols.nn){
+	if(cols.nc){
 		for(l in 1:length(lambdas)){
-			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
+			temp <- adaLasso.nc(t(X),u0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
 			sp <- rowMeans(t)
@@ -216,7 +216,7 @@ updatev <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,savepat
 }
 
 #update u
-updateu <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,savepath=FALSE,start=FALSE){
+updateu <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,savepath=FALSE,start=FALSE){
 	p <- nrow(X)
 	err <- pcer*p
 	ols <- X%*%v0
@@ -226,9 +226,9 @@ updateu <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,savepat
 	qs <- numeric(length(lambdas))
 	thrall <- numeric(length(lambdas))
 	ls <- length(lambdas)
-	if(rows.nn){
+	if(rows.nc){
 		for(l in 1:length(lambdas)){
-			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
+			temp <- adaLasso.nc(X,v0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
 			sp <- rowMeans(t)
@@ -277,7 +277,7 @@ updateu <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,savepat
 
 #update v pointwise
 
-updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,l=NULL,start=FALSE){
+updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NULL,start=FALSE){
 	n <- ncol(X)
 	err <- pcer*n
 	ols <- t(X)%*%u0
@@ -288,9 +288,9 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,l=NU
 	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
-	if(cols.nn){
+	if(cols.nc){
 		for(g in 1:(length(lambdas))){
-			temp <- adaLasso.nn(t(X),u0,lambdas[l],steps,size,gamm)
+			temp <- adaLasso.nc(t(X),u0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
 			sp <- rowMeans(t)
@@ -303,7 +303,7 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,l=NU
 				if(l == length(lambdas))break
 				if(thrall[l+1]> ss.thr[2]){
 					ls <- l+1
-					temp <- adaLasso.nn(t(X),u0,lambdas[ls],steps,size,gamm)
+					temp <- adaLasso.nc(t(X),u0,lambdas[ls],steps,size,gamm)
 					t <- temp!=0
 					qs[ls] <- mean(colSums(t))
 					sp <- rowMeans(t)
@@ -391,7 +391,7 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nn=FALSE,l=NU
 
 
 #update u pointwise
-updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,l=NULL,start=FALSE){
+updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NULL,start=FALSE){
 	p <- nrow(X)
 	#err <- pcer*p.ini
 	err <- pcer*p
@@ -403,9 +403,9 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,l=NU
 	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
-	if(rows.nn){
+	if(rows.nc){
 		for(g in 1:(length(lambdas))){
-			temp <- adaLasso.nn(X,v0,lambdas[l],steps,size,gamm)
+			temp <- adaLasso.nc(X,v0,lambdas[l],steps,size,gamm)
 			t <- temp!=0
 			qs[l] <- mean(colSums(t))
 			sp <- rowMeans(t)
@@ -418,7 +418,7 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,l=NU
 				if(l == length(lambdas))break
 				if(thrall[l+1]> ss.thr[2]){
 					ls <- l+1
-					temp <- adaLasso.nn(X,v0,lambdas[ls],steps,size,gamm)
+					temp <- adaLasso.nc(X,v0,lambdas[ls],steps,size,gamm)
 					t <- temp!=0
 					qs[ls] <- mean(colSums(t))
 					sp <- rowMeans(t)
@@ -505,24 +505,24 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nn=FALSE,l=NU
 }
 
 #adaptive Lasso 
-adaLasso <- function(X,b,lambda,steps,size,gamm=0){
+adaLasso.nc <- function(X,b,lambda,steps,size,gamm=0){
 	subsets <- sapply(1:steps,function(x){sample(1:length(b),length(b)*size)})
-	res <- sapply(1:steps,adaLassoSteps,subsets,X,b,lambda,gamm)
+	res <- sapply(1:steps,adaLassoSteps.nc,subsets,X,b,lambda,gamm)
 	return(res)
 }
-adaLassoSteps <- function(index,subsets,X,b,lambda,gamm){
+adaLassoSteps.nc <- function(index,subsets,X,b,lambda,gamm){
 	ols <- X[,subsets[,index]]%*%b[subsets[,index]]
 	delta <- lambda/(abs(ols)^gamm)                        
 	ols <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
 	ols[is.na(ols)] <- 0
 	return(ols)
 }
-adaLasso.nn <- function(X,b,lambda,steps,size,gamm=0){
+adaLasso <- function(X,b,lambda,steps,size,gamm=0){
 	subsets <- sapply(1:steps,function(x){sample(1:length(b),length(b)*size)})
-	res <- sapply(1:steps,adaLassoSteps.nn,subsets,X,b,lambda,gamm)
+	res <- sapply(1:steps,adaLassoSteps,subsets,X,b,lambda,gamm)
 	return(res)
 }
-adaLassoSteps.nn <- function(index,subsets,X,b,lambda,gamm){
+adaLassoSteps <- function(index,subsets,X,b,lambda,gamm){
 	ols <- X[,subsets[,index]]%*%b[subsets[,index]]
 	delta <- lambda/(abs(ols)^gamm)                        
 	ols <- sign(ols)*(abs(ols)>=delta)*(abs(ols)-delta)
