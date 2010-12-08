@@ -6,15 +6,13 @@
 #       X - argument (n x d matrix)
 #       threu = type of penalty (thresholding rule) for the left 
 #       	    singular vector,
-#			1 = (Adaptive) LASSO (default)
+#				  1 = (Adaptive) LASSO (default)
 #                 2 = hard thresholding
-#                 3 = SCAD
-#
+#                
 #       threv = type of penalty (thresholding rule) for the right 
 #               singular vector,
 #                 1 = (Adaptive) LASSO (default)
 #                 2 = hard thresholding
-#                 3 = SCAD
 #
 #       gamu = weight parameter in Adaptive LASSO for the 
 #              left singular vector, nonnegative constant (default = 0, LASSO)

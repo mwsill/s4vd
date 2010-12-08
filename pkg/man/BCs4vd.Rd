@@ -6,7 +6,7 @@
 Biclustering via sparse singular value decomposition incorporating stability selection
 }
 \description{
-The function performs the a biclustering of the data matrix by sparse singular value decomposition with a nested stability selection
+The function performs the a biclustering of the data matrix by sparse singular value decomposition with a nested stability selection.
 }
 \usage{
 \S4method{biclust}{matrix,BCs4vd}(x, method=BCs4vd(),
@@ -32,93 +32,80 @@ The function performs the a biclustering of the data matrix by sparse singular v
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
-the matrix to be clustered
+The matrix to be clustered.
 }
   \item{steps}{
-number of subsamples used to perform the stability selection
+Number of subsamples used to perform the stability selection.
 }
   \item{pcerv}{
-per comparsion wise error rate to control the number of falsely selected right singular vector coefficients (columns/samples)
+Per comparsion wise error rate to control the number of falsely selected right singular vector coefficients (columns/samples).
 }
   \item{pceru}{
-per comparsion wise error rate to control the number of falsely selected left singular vector coefficients (rows/genes)
+Per comparsion wise error rate to control the number of falsely selected left singular vector coefficients (rows/genes).
 }
   \item{ss.thr}{
-range of the cutoff threshold (relative selection frequency) for the stability selection
+Range of the cutoff threshold (relative selection frequency) for the stability selection.
 }
   \item{size}{
-size of the subsamples used to perform the stability selection  
+Size of the subsamples used to perform the stability selection.  
 }
   \item{gamm}{
-weight parameter for the adaptive LASSO, nonnegative constant (default = 0, LASSO)
+Weight parameter for the adaptive LASSO, nonnegative constant (default = 0, LASSO).
 }
   \item{iter}{
-maximal number of iterations to fit a single bicluster
+Maximal number of iterations to fit a single bicluster.
 }
   \item{nbiclust}{
-maximal number of biclusters 
+Maximal number of biclusters. 
 }
   \item{merr}{
-threshold to decide convergence 
+Threshold to decide convergence. 
 }
   \item{cols.nc}{
-allow for negative correlation of columns (samples) over rows (genes)
+Allow for negative correlation of columns (samples) over rows (genes).
 }
   \item{rows.nc}{
-allow for negative correlation of rows (genes) over columns (samples)
+Allow for negative correlation of rows (genes) over columns (samples).
 }
   \item{row.overlap}{
-allow rows to overlap between biclusters 
+Allow rows to overlap between biclusters. 
 }
   \item{col.overlap}{
-allow columns to overlap between biclusters 
+Allow columns to overlap between biclusters. 
 }
   \item{row.min}{
-minimal number of rows
+Minimal number of rows.
 }
   \item{col.min}{
-minimal number of columns
+Minimal number of columns.
 }
   \item{pointwise}{
-
+If TRUE performs a fast pointwise stability selection instead of calculating the complete stability path.  
 }
   \item{start.iter}{
-number 
+Number of starting iterations in which the algorithm is not allowed to converge. 
 }
   \item{savepath}{
-number of cores for parallelization
+Saves the stability path in order plot the path with the stabpathplot function.
+Note that pointwise needs to be TRUE to save the path. For extreme high dimensional data sets (e.g. the lung cancer example) the resulting
+biclust object may exceed the available memory.
 }
-}
-\details{
-kommt noch
 }
 \value{
-kommt noch
-}
-\references{
-kommt noch
+Returns an object of class \code{Biclust}.
 }
 \author{
-kommt noch
-}
-\note{
-kommt noch
+Martin Sill
+\email{m.sill@dkfz.de}
 }
 
-%% ~Make other sections like Warning with \section{Warning }{....} ~
+\seealso{ \code{\link{biclust}}, \code{\link{Biclust}}}
 
-\seealso{
-kommt noch
-}
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-data(BicatYeast)
-X <- scale(BicatYeast)
-set.seed(12345)
-res <- biclust(X,method=BCs4vd,r.err=50,c.err=5,r.steps=100,c.steps=100,nbiclust=5)
-## The function is currently defined as
 
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
+}
+
+\keyword{cluster}
+\keyword{classif}
+\keyword{svd}
+\keyword{stability selection}
