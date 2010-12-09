@@ -5,7 +5,7 @@ Version: 1.0
 Date: 2010-07-27
 Author: Martin Sill, Sebastian Kaiser
 Maintainer: Martin Sill <m.sill@dkfz.de>
-Depends: multicore, biclust
+Depends: biclust
 Suggests: isa2
 Description: The main function s4vd performs a biclustering via sparse singular value decomposition with a nested stability selection.
 			 The results is an biclust object and thus all methods of the biclust package can be applied.

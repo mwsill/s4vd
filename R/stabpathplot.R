@@ -1,7 +1,7 @@
 stabpath <- function(res,number){
-	if(!class(res@Parameters$Method)=="BCs4vd"){
-		stop("object is not of class BCs4vd")
-	}
+	#if(!class(res@Parameters$Method)=="BCs4vd"){
+	#	stop("object is not of class BCs4vd")
+	#}
 	if(res@Parameters$savepath&!res@Parameters$pointwise){
 		vc <- res@info[[number]][[1]]
 		uc <- res@info[[number]][[2]]

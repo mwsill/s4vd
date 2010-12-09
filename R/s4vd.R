@@ -6,10 +6,10 @@ s4vd <- function(
 		ss.thr = c(0.6,0.65),
 		size = 0.632,
 		gamm = 0,
-		iter = 100,
+		iter = 20,
 		nbiclust = 10,
-		merr = 0.0001,
-		cols.nc=FALSE,
+		merr = 10^(-4),
+		cols.nc=TRUE,
 		rows.nc=TRUE,
 		row.overlap=TRUE,
 		col.overlap=TRUE,
@@ -139,6 +139,7 @@ s4vd <- function(
 		}
 		if(i==iter){
 			number <- k-1
+			stop <- TRUE
 			cat("Fail to converge! Increase the number of iterations !","\n")
 			gc()
 			break
