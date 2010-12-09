@@ -1,7 +1,7 @@
 frobenius <- function(res){
-	if(!class(res@Parameters$Method)=="BCs4vd"){
-		stop("object is not of class BCs4vd")
-	}
+	#if(!class(res@Parameters$Method)=="BCs4vd"){
+	#	stop("object is not of class BCs4vd")
+	#}
 	frobBC <- numeric()
 	frobSVD <- numeric()		
 	for(k in 1:res@Number){ 
