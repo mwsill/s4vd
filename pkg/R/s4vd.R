@@ -157,9 +157,8 @@ s4vd <- function(
 
 #update v
 updatev <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,savepath=FALSE){
-	n <- ncol(X)
+	n.ini <- n <- ncol(X)
 	err <- pcer*n.ini
-	err*n
 	ols <- t(X)%*%u0
 	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
@@ -218,8 +217,8 @@ updatev <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,savepat
 
 #update u
 updateu <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,savepath=FALSE,start=FALSE){
-	p <- nrow(X)
-	err <- pcer*p
+	p.ini <- p <- nrow(X)
+	err <- pcer*p.ini
 	ols <- X%*%v0
 	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
@@ -279,8 +278,8 @@ updateu <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,savepat
 #update v pointwise
 
 updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NULL,start=FALSE){
-	n <- ncol(X)
-	err <- pcer*n
+	n.ini <- n <- ncol(X)
+	err <- pcer*n.ini
 	ols <- t(X)%*%u0
 	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
@@ -289,6 +288,8 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NU
 	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
+	l.min <- 1
+	l.max <- length(lambdas)
 	if(cols.nc){
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso.nc(t(X),u0,lambdas[l],steps,size,gamm)
@@ -300,8 +301,9 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NU
 				ls <- l
 				break
 			} 
-			if(thrall[l] < ss.thr[1]){
-				if(l == length(lambdas))break
+			if(thrall[l] < ss.thr[1]){          # if thr too small
+				l.min <- l
+				if(l == length(lambdas))break   # if next thr too high use next
 				if(thrall[l+1]> ss.thr[2]){
 					ls <- l+1
 					temp <- adaLasso.nc(t(X),u0,lambdas[ls],steps,size,gamm)
@@ -311,20 +313,21 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NU
 					thrall[ls] <- ((qs[ls]^2/(err*n.ini))+1)/2
 					break
 				}
-				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
-				while(thrall[l]!=0){ 
+				l <- min(length(lambdas),l.max,l + ceiling(length(lambdas)/(g+1))) # increase lambda
+				while(thrall[l]!=0){  # if thr for current lambda available decrease lambda 
 					l <- l-1
 					if(l == 0)break
 				} 
 			}
 			if(thrall[l] > ss.thr[2]){ 
+				l.max <- l
 				if(l == 0)break
 				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
 					ls <- l
 					break
 				}
-				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
-				while(thrall[l]!=0){ 
+				l <- max(1,l.min,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0 ){ 
 					l <- l+1
 					if(l == length(l))break
 				} 
@@ -341,46 +344,48 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NU
 				ls <- l
 				break
 			} 
-			if(thrall[l] < ss.thr[1]){
-				if(l == length(lambdas))break
+			if(thrall[l] < ss.thr[1]){          # if thr too small
+				l.min <- l
+				if(l == length(lambdas))break   # if next thr too high use next
 				if(thrall[l+1]> ss.thr[2]){
 					ls <- l+1
 					temp <- adaLasso(t(X),u0,lambdas[ls],steps,size,gamm)
 					t <- temp!=0
 					qs[ls] <- mean(colSums(t))
 					sp <- rowMeans(t)
-					thrall[ls] <- ((qs[l]^2/(err*n.ini))+1)/2
+					thrall[ls] <- ((qs[ls]^2/(err*n.ini))+1)/2
 					break
 				}
-				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
-				while(thrall[l]!=0){ 
+				l <- min(length(lambdas),l.max,l + ceiling(length(lambdas)/(g+1))) # increase lambda
+				while(thrall[l]!=0 ){  # if thr for current lambda available decrease lambda 
 					l <- l-1
 					if(l == 0)break
 				} 
 			}
 			if(thrall[l] > ss.thr[2]){ 
+				l.max <- l
 				if(l == 0)break
 				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
 					ls <- l
 					break
 				}
-				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
-				while(thrall[l]!=0){ 
+				l <- max(1,l.min,l - ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0 ){ 
 					l <- l+1
 					if(l == length(l))break
 				} 
 			}
 		}
-	}
-	thr <- thrall[ls]
-	if(thr > ss.thr[2]){
-		while(pcer <= 0.5){
-			pcer <- pcer + 0.01	
-			thrall <- ((qs^2/((pcer*n.ini)*n.ini))+1)/2
-			thr <- thrall[ls]
-			if(thr < ss.thr[2])	break
-		}
-	}
+	}	
+	#thr <- thrall[ls]
+	#if(thr > ss.thr[2]){
+	#	while(pcer <= 0.5){
+	#		pcer <- pcer + 0.01	
+	#		thrall <- ((qs^2/((pcer*n.ini)*n.ini))+1)/2
+	#		thr <- thrall[ls]
+	#		if(thr < ss.thr[2])	break
+	#	}
+	#}
 	thr <- ((qs[ls]^2/((pcer*n.ini)*n.ini))+1)/2
 	stable <- which(sp>=thr)
 	if(length(stable)==0)stop <- TRUE
@@ -393,9 +398,8 @@ updatev.pw <- function(X,u0,pcer,n.ini,ss.thr,steps,size,gamm,cols.nc=FALSE,l=NU
 
 #update u pointwise
 updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NULL,start=FALSE){
-	p <- nrow(X)
-	#err <- pcer*p.ini
-	err <- pcer*p
+	p.ini <- p <- nrow(X)
+	err <- pcer*p.ini
 	ols <- X%*%v0
 	stop <- FALSE
 	lambdas <- sort(c(abs(ols),0),decreasing=TRUE)
@@ -404,6 +408,8 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NU
 	ls <- length(lambdas)
 	if(is.null(l)) l <- which(lambdas==quantile(lambdas,0.5,type=1))[1]
 	#search for a lambda
+	l.min <- 1
+	l.max <- length(lambdas)
 	if(rows.nc){
 		for(g in 1:(length(lambdas))){
 			temp <- adaLasso.nc(X,v0,lambdas[l],steps,size,gamm)
@@ -416,6 +422,7 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NU
 				break
 			} 
 			if(thrall[l] < ss.thr[1]){
+				l.min <- l
 				if(l == length(lambdas))break
 				if(thrall[l+1]> ss.thr[2]){
 					ls <- l+1
@@ -426,19 +433,20 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NU
 					thrall[ls] <- ((qs[ls]^2/(err*p.ini))+1)/2
 					break
 				}
-				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
-				while(thrall[l]!=0){ 
+				l <- min(length(lambdas),l.max,l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0 ){  # if thr for current lambda available decrease lambda 
 					l <- l-1
 					if(l == 0)break
 				} 
 			}
 			if(thrall[l] > ss.thr[2]){ 
+				l.max <- l
 				if(l == 0)break
 				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
 					ls <- l
 					break
 				}
-				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				l <- max(1,l.min,l - ceiling(length(lambdas)/(g+1)))
 				while(thrall[l]!=0){ 
 					l <- l+1
 					if(l == length(l))break
@@ -457,6 +465,7 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NU
 				break
 			} 
 			if(thrall[l] < ss.thr[1]){
+				l.min <- l
 				if(l == length(lambdas))break
 				if(thrall[l+1]> ss.thr[2]){
 					ls <- l+1
@@ -467,19 +476,20 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NU
 					thrall[ls] <- ((qs[ls]^2/(err*p.ini))+1)/2
 					break
 				}
-				l <- min(length(lambdas),l + ceiling(length(lambdas)/(g+1)))
-				while(thrall[l]!=0){ 
+				l <- min(length(lambdas),l.max,l + ceiling(length(lambdas)/(g+1)))
+				while(thrall[l]!=0 ){  # if thr for current lambda available decrease lambda 
 					l <- l-1
 					if(l == 0)break
 				} 
 			}
 			if(thrall[l] > ss.thr[2]){ 
+				l.max <- l
 				if(l == 0)break
 				if(thrall[l-1]<ss.thr[1]&thrall[l-1]!=0){
 					ls <- l
 					break
 				}
-				l <- max(1,l - ceiling(length(lambdas)/(g+1)))
+				l <- max(1,l.max,l - ceiling(length(lambdas)/(g+1)))
 				while(thrall[l]!=0){ 
 					l <- l+1
 					if(l == length(l))break
@@ -487,15 +497,15 @@ updateu.pw <- function(X,v0,pcer,p.ini,ss.thr,steps,size,gamm,rows.nc=FALSE,l=NU
 			}
 		}
 	}
-	thr <- thrall[l]
-	if(thr > ss.thr[2]){
-		while(pcer <= 0.5){
-			pcer <- pcer + 0.01	
-			thrall <- ((qs^2/((pcer*p.ini)*p.ini))+1)/2
-			thr <- thrall[ls]
-			if(thr < ss.thr[2])break
-		}
-	}
+	#thr <- thrall[l]
+	#if(thr > ss.thr[2]){
+	#	while(pcer <= 0.5){
+	#		pcer <- pcer + 0.01	
+	#		thrall <- ((qs^2/((pcer*p.ini)*p.ini))+1)/2
+	#		thr <- thrall[ls]
+	#		if(thr < ss.thr[2])break
+	#	}
+	#}
 	thr <- ((qs[ls]^2/((pcer*p.ini)*p.ini))+1)/2
 	stable <- which(sp>=thr)
 	if(length(stable)==0)stop <- TRUE

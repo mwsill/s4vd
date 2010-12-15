@@ -154,12 +154,12 @@ parallelCoordinates(X,ress4vd,1,plotBoth=TRUE, compare=TRUE,order = TRUE)
 # lung cancer data set (Lee et al. 2010)
 data(lung)
 vars <- apply(lung,1,var)
-p <- nrow(lung)
+#p <- nrow(lung)
+p <- 100
 ord <- order(vars,decreasing=TRUE)
 X <- lung[ord[1:p],]
 set.seed(12)
-res <- s4vd(X,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),start.iter=0,size=0.632,cols.nc=FALSE
-,steps=100,pointwise=T,merr=0.001,iter=30,nbiclust=4,col.overlap=FALSE)
+res <- s4vd(X,pcerv=0.3,pceru=0.5,ss.thr=c(0.6,0.65),start.iter=0,size=0.632,cols.nc=FALSE,steps=100,pointwise=T,merr=0.0001,iter=100,nbiclust=5,col.overlap=F)
 frobenius(res)
 library(marray)
 cols <- maPalette(low="blue", high="red", mid="white",k=50) 
