@@ -159,7 +159,7 @@ p <- 100
 ord <- order(vars,decreasing=TRUE)
 X <- lung[ord[1:p],]
 set.seed(12)
-res <- s4vd(X,pcerv=0.3,pceru=0.5,ss.thr=c(0.6,0.65),start.iter=0,size=0.632,cols.nc=FALSE,steps=100,pointwise=T,merr=0.0001,iter=100,nbiclust=5,col.overlap=F)
+res <- s4vd(X,pcerv=0.3,pceru=0.5,ss.thr=c(0.6,0.65),start.iter=3,size=0.632,cols.nc=FALSE,steps=100,pointwise=T,merr=0.0001,iter=100,nbiclust=5,col.overlap=F)
 frobenius(res)
 library(marray)
 cols <- maPalette(low="blue", high="red", mid="white",k=50) 

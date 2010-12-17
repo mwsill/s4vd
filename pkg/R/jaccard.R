@@ -16,4 +16,6 @@ jaccardmat <- function(res1,res2){
 	mat <- matrix(0,ncol=1,nrow=1)
 	}
 	return(mat)
+	rownames(mat) <- c("BC1")
+	colnames(mat) <- c("BC1")
 }
