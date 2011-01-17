@@ -13,8 +13,8 @@ s4vd <- function(
 		rows.nc=TRUE,
 		row.overlap=TRUE,
 		col.overlap=TRUE,
-		row.min=4,
-		col.min=4,
+		row.min=1,
+		col.min=1,
 		pointwise=TRUE,
 		start.iter=0,
 		savepath=FALSE
@@ -109,7 +109,7 @@ s4vd <- function(
 		cols[colsin] <- v0!=0
 		Rows[[k]] <- rows
 		Cols[[k]] <- cols
-		if(sum(u0!=0)<row.min|sum(v0!=0)<col.min) stop <- TRUE
+		#if(sum(u0!=0)<row.min|sum(v0!=0)<col.min) stop <- TRUE
 		if(!row.overlap){
 			d0 <- as.numeric(t(u0)%*%X%*%v0)
 			frobBC <- sqrt(sum((X - (d0*u0%*%t(v0)))[rowsin[rows],cols]^2))
@@ -150,6 +150,8 @@ s4vd <- function(
 			rows.nc=rows.nc, cols.nc=cols.nc, nbiclust=nbiclust, merr=merr, row.min=row.min, col.min=col.min, pointwise=pointwise, start.iter=start.iter, savepath=savepath, Call=MYCALL)  
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
+	RowxNumber <- as.matrix(RowxNumber[,1:number])
+	NumberxCol <- t(as.matrix(NumberxCol[1:number,]))
 	Number <- number
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
