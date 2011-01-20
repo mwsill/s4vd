@@ -103,6 +103,7 @@ s4vd <- function(
 		}
 		stableu <- uc$sp >= uc$thr
 		stablev <- vc$sp >= vc$thr
+		d0 <- as.numeric(t(u0)%*%X%*%v0)
 		u0[!stableu] <- 0
 		v0[!stablev] <- 0
 		rows[rowsin] <- u0!=0
@@ -111,7 +112,7 @@ s4vd <- function(
 		Cols[[k]] <- cols
 		#if(sum(u0!=0)<row.min|sum(v0!=0)<col.min) stop <- TRUE
 		if(!row.overlap){
-			d0 <- as.numeric(t(u0)%*%X%*%v0)
+			#d0 <- as.numeric(t(u0)%*%X%*%v0)
 			frobBC <- sqrt(sum((X - (d0*u0%*%t(v0)))[rowsin[rows],cols]^2))
 			frobSVD <- sqrt(sum((X-SVD$d*SVD$u%*%t(SVD$v))[rowsin[rows],cols]^2))
 			rowsin[rows] <- FALSE
@@ -119,7 +120,7 @@ s4vd <- function(
 			info[[k]] <- list(vc,uc,frobenius=c(frobBC=frobBC,frobSVD=frobSVD))
 		} 
 		if(!col.overlap){
-			d0 <- as.numeric(t(u0)%*%X%*%v0)
+			#d0 <- as.numeric(t(u0)%*%X%*%v0)
 			frobBC <- sqrt(sum((X - (d0*u0%*%t(v0)))[rows,colsin[cols]]^2))
 			frobSVD <- sqrt(sum((X-SVD$d*SVD$u%*%t(SVD$v))[rows,colsin[cols]]^2))
 			colsin[cols] <- FALSE
@@ -127,7 +128,7 @@ s4vd <- function(
 			info[[k]] <- list(vc,uc,frobenius=c(frobBC=frobBC,frobSVD=frobSVD))
 		} 
 		if(row.overlap&col.overlap){
-			d0 <- as.numeric(t(u0)%*%X%*%v0)
+			#d0 <- as.numeric(t(u0)%*%X%*%v0)
 			frobSVD <- sqrt(sum((X-(SVD$d*SVD$u%*%t(SVD$v)))[rows,cols]^2)) 
 			X <- X - (d0*u0%*%t(v0))
 			frobBC <- sqrt(sum(X[rows,cols]^2))
@@ -151,7 +152,7 @@ s4vd <- function(
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
 	RowxNumber <- as.matrix(RowxNumber[,1:number])
-	NumberxCol <- t(as.matrix(NumberxCol[1:number,]))
+	NumberxCol <- as.matrix(NumberxCol[1:number,])
 	Number <- number
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
