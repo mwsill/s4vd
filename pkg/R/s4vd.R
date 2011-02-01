@@ -110,29 +110,20 @@ s4vd <- function(
 		cols[colsin] <- v0!=0
 		Rows[[k]] <- rows
 		Cols[[k]] <- cols
-		#if(sum(u0!=0)<row.min|sum(v0!=0)<col.min) stop <- TRUE
 		if(!row.overlap){
-			#d0 <- as.numeric(t(u0)%*%X%*%v0)
-			frobBC <- sqrt(sum((X - (d0*u0%*%t(v0)))[rowsin[rows],cols]^2))
-			frobSVD <- sqrt(sum((X-SVD$d*SVD$u%*%t(SVD$v))[rowsin[rows],cols]^2))
 			rowsin[rows] <- FALSE
 			X <- startX[rowsin,colsin]
-			info[[k]] <- list(vc,uc,frobenius=c(frobBC=frobBC,frobSVD=frobSVD))
+			info[[k]] <- list(vc,uc,layer=list(u0,v0,d0))
 		} 
 		if(!col.overlap){
-			#d0 <- as.numeric(t(u0)%*%X%*%v0)
-			frobBC <- sqrt(sum((X - (d0*u0%*%t(v0)))[rows,colsin[cols]]^2))
-			frobSVD <- sqrt(sum((X-SVD$d*SVD$u%*%t(SVD$v))[rows,colsin[cols]]^2))
 			colsin[cols] <- FALSE
 			X <- startX[rowsin,colsin]
-			info[[k]] <- list(vc,uc,frobenius=c(frobBC=frobBC,frobSVD=frobSVD))
+			info[[k]] <- list(vc,uc,layer=list(u0,v0,d0))
 		} 
 		if(row.overlap&col.overlap){
-			#d0 <- as.numeric(t(u0)%*%X%*%v0)
-			frobSVD <- sqrt(sum((X-(SVD$d*SVD$u%*%t(SVD$v)))[rows,cols]^2)) 
 			X <- X - (d0*u0%*%t(v0))
 			frobBC <- sqrt(sum(X[rows,cols]^2))
-			info[[k]] <- list(vc,uc,frobenius=c(frobBC=frobBC,frobSVD=frobSVD))
+			info[[k]] <- list(vc,uc,layer=list(u0,v0,d0))
 		}
 		if(stop){
 			number <- k-1
