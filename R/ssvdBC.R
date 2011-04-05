@@ -11,7 +11,8 @@ ssvdBC <- function(X,K=10,threu = 1, threv = 1, gamu = 0, gamv =0 , merr = 10^(-
 			}
 			RowxNumber[,k] <- res[[k]][[1]]!=0
 			NumberxCol[k,] <- res[[k]][[2]]!=0
-			d <- as.integer(t(res[[k]][[1]])%*%X%*%res[[k]][[2]])
+			#as.numeric(t(u0)%*%X%*%v0)
+			d <- as.numeric(t(res[[k]][[1]])%*%X%*%res[[k]][[2]])
 			res[[k]][[4]] <- d
 			X <- X - (d*res[[k]][[1]]%*%t(res[[k]][[2]]))
 		}
