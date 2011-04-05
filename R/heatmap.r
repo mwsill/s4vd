@@ -1,215 +1,145 @@
-heatmapBC <- function(x,bicResult,number=0,local=FALSE,order=FALSE, axes = FALSE,outside = FALSE, zlim = c(min(x), max(x)), ...){
-    n <- bicResult@Number
-
-
-    if(is.numeric(number)){
-        if(length(number)==1){
-              if(number==0){
-                  bicRows <- numeric()
-                  bicCols <- numeric()
-                  xl <- numeric(n)
-                  xr <- numeric(n)
-                  yt <- numeric(n)
-                  yb <- numeric(n)
-                  xlo <- numeric(n)
-                  yto <- numeric(n)
-                  res <- list()
-
-                  for(i in 1:n){
-                      res <- heatorder(x, bicResult, bicRows, bicCols, order, i, n, i+1)
-                      bicRows <- res[[1]]
-                      bicCols <- res[[2]]
-                      xl[i] <- res[[3]]
-                      xr[i] <- res[[4]]
-                      yt[i] <- res[[5]]
-                      yb[i] <- res[[6]]
-                      xlo[i] <- res[[7]]
-                      yto[i] <- res[[8]]
-
-                  }
-
-                  bicRows <- c(bicRows, which(!(1:dim(x)[1] %in% bicRows)))
-                  bicCols <- c(bicCols, which(!(1:dim(x)[2] %in% bicCols)))
-
-                  image(t(x[rev(bicRows),bicCols]), axes=axes, zlim=zlim, x = 1:length(bicCols), y = 1:length(bicRows), ...)
-				  axis(1,1:ncol(x),labels=colnames(x)[bicCols],las=2,line = -0.5, tick = 0,cex.axis = 0.7)
-                  rect(xleft = xl[1]+0.5, xright = xr[1] + 0.5, ytop = length(bicRows) - yt[1] + 0.5, ybottom = length(bicRows) - yb[1] + 0.5)
-                  for(i in 2:n){
-                      rect(xleft = xl[i]- xlo[i-1]+0.5, xright = xr[i] + 0.5, ytop = length(bicRows) - yt[i] + yto[i-1] + 0.5, ybottom = length(bicRows) - yb[i] + 0.5)
-                  }
-
-                  if(outside){
-                      print("Hallo")
-                      overR <- which(bicResult@RowxNumber[,1])
-                      overC <- which(bicResult@NumberxCol[1,])
-                      res <- list()
-                      for(i in 2:n){
-                          res <- printrect(x, bicResult, overR, overC, i, i-1, order, bicRows, bicCols, xl, xlo, yt, yto, xr, yb)
-                          overR <- res[[1]]
-                          overC <- res[[2]]
-                      }
-                  }
-
-
-              }
-              else {
-                  bicRows=which(bicResult@RowxNumber[,number])
-                  yb <- length(bicRows)
-                  bicCols=which(bicResult@NumberxCol[number,])
-                  xr <- length(bicCols)
-
-                  if(order)
-                  {
-                      bicRows <- bicRows[order(rowSums(x[bicRows,bicCols]))]
-                      bicCols <- bicCols[order(colSums(x[bicRows,bicCols]))]
-                  }
-
-                  if(!local){
-                      bicRows <- c(bicRows, which(!(1:dim(x)[1] %in% bicRows)))
-                      bicCols <- c(bicCols, which(!(1:dim(x)[2] %in% bicCols)))
-                  }
-                  image(t(x[rev(bicRows),bicCols]), axes=axes, zlim=zlim, x = 1:length(bicCols), y = 1:length(bicRows), ...)
-				  axis(1,1:ncol(x),labels=colnames(x),las=2,line = -0.5, tick = 0,cex.axis = 0.7) 
-                  if(!local){
-                      rect(xleft = 0.5, xright = xr + 0.5, ytop = length(bicRows)+0.5, ybottom = length(bicRows) - yb + 0.5)
-					  
-                  }
-
-              }
-
-          }
-        if(length(number)>1){
-                  bicRows <- numeric()
-                  bicCols <- numeric()
-                  xl <- numeric(n)
-                  xr <- numeric(n)
-                  yt <- numeric(n)
-                  yb <- numeric(n)
-                  xlo <- numeric(n)
-                  yto <- numeric(n)
-                  res <- list()
-
-                  for(i in 1:length(number)){
-                      res <- heatorder(x, bicResult, bicRows, bicCols, order, number[i], number[length(number)], number[min(i+1,length(number))])
-                      bicRows <- res[[1]]
-                      bicCols <- res[[2]]
-                      xl[i] <- res[[3]]
-                      xr[i] <- res[[4]]
-                      yt[i] <- res[[5]]
-                      yb[i] <- res[[6]]
-                      xlo[i] <- res[[7]]
-                      yto[i] <- res[[8]]
-                  }
-                  image(t(x[rev(bicRows),bicCols]), axes=axes, zlim=zlim, x = 1:length(bicCols), y = 1:length(bicRows),...)
-				  axis(1,1:ncol(x),labels=colnames(x),las=2,line = -0.5, tick = 0,cex.axis = 0.7) 
-
-                  rect(xleft = xl[1]+0.5, xright = xr[1] + 0.5, ytop = length(bicRows) - yt[1] + 0.5, ybottom = length(bicRows) - yb[1] + 0.5)
-                  for(i in 2:length(number)){
-                      rect(xleft = xl[i]- xlo[i-1]+0.5, xright = xr[i] + 0.5, ytop = length(bicRows) - yt[i] + yto[i-1] + 0.5, ybottom = length(bicRows) - yb[i] + 0.5)
-				   }
-
-
-
-
-        }
-
-
-     }else{
-        image(t(x),axes=axes,zlim=zlim,...)
-    }
-
-
-
-
-
+BCheatmap <- function(
+		X,res,
+		cexR=.75,
+		cexC=.75,
+		axisR=FALSE,
+		axisC=TRUE,
+		heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
+		clustercols= rainbow_hcl(res@Number, c = 100, l = 50),
+		allrows=F,
+		allcolumns=T
+)
+{
+	number <- res@Number
+	layout(matrix(c(1,2,1,2), 2, 2, byrow = TRUE),widths=c(9,1),heights=c(1,1))
+	if(number==1){
+		rowmat <- res@RowxNumber
+		colmat <- t(res@NumberxCol)
+		roworder <- c(which(res@RowxNumber[,1]),which(!res@RowxNumber[,1]))
+		colorder <- c(which(res@NumberxCol[1,]),which(!res@NumberxCol[1,]))
+		X <- X[roworder,colorder]
+		par(omi=c(.2,0,0,.5)) 
+		image(t(X)[,nrow(X):1],col=heatcols,x=c(1:ncol(X)),y=c(1:nrow(X)),axes=F,ylab="",xlab="")
+		if(axisC)axis(1,1:ncol(X),labels=colnames(X),las=2,line = -0.5, tick = 0,cex.axis = cexC)
+		if(axisR)axis(4,1:nrow(X),labels=rownames(X),las=2,line = -0.5, tick = 0,cex.axis = cexR)
+		rin1 <- which(roworder %in% which(rowmat[,1]))
+		cin1 <- which(colorder %in% which(colmat[,1]))
+		nr <- length(roworder)
+		nc <- length(colorder)
+		if(allrows) nr <- nrow(X)
+		if(allcolumns) nc <- ncol(X)
+		xl <- 0.5
+		yb <- nr-length(rin1)+0.5
+		xr <- length(cin1)+0.5
+		yt <- nr+0.5
+		rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=25,lwd=2.5,col=clustercols[1])
+	}else{
+	rowmat <- res@RowxNumber
+	overlap <- rowSums(rowmat)
+	roworder <- which(overlap==number) # in all
+	if(number>2){
+		for(i in 1:(number-2)){
+			innext <- intersect(which(rowmat[,i]),which(rowmat[,i+1]))
+			nooverlap <- which(rowmat[,i]&rowSums(rowmat)==1)
+			for(l in 1:(number-1-i)){ 
+				temp   <- intersect(which(rowmat[,i]),which(rowmat[,i+1+l])) 
+				temp   <- temp[!intersect(which(rowmat[,i]),which(rowmat[,i+1+l])) %in% innext]
+				roworder <- unique(c(roworder,temp))
+			}
+			roworder <- unique(c(roworder,nooverlap))
+			roworder <- unique(c(roworder,innext))
+		}
+	}
+	innext <- intersect(which(rowmat[,number-1]),which(rowmat[,number]))
+	nooverlap <- which(rowmat[,number-1]&rowSums(rowmat)==1)
+	roworder <- unique(c(roworder,nooverlap))
+	roworder <- unique(c(roworder,innext))
+	nooverlap <- which(rowmat[,number]&rowSums(rowmat)==1)
+	roworder <- unique(c(roworder,nooverlap))
+	if(allrows) roworder <- c(roworder,which(!1:nrow(rowmat)%in%roworder)) 
+	colmat <- t(res@NumberxCol)
+	overlap <- rowSums(colmat)
+	colorder <- which(overlap==number) # in all
+	if(number>2){
+		for(i in 1:(number-2)){
+			innext <- intersect(which(colmat[,i]),which(colmat[,i+1]))
+			nooverlap <- which(colmat[,i]&rowSums(colmat)==1)
+			for(l in 1:(number-1-i)){ 
+				temp   <- intersect(which(colmat[,i]),which(colmat[,i+1+l])) 
+				temp   <- temp[!intersect(which(colmat[,i]),which(colmat[,i+1+l])) %in% innext]
+				colorder <- unique(c(colorder,temp))
+			}
+			colorder <- unique(c(colorder,nooverlap))
+			colorder <- unique(c(colorder,innext))
+		}
+	}	
+	innext <- intersect(which(colmat[,number-1]),which(colmat[,number]))
+	nooverlap <- which(colmat[,number-1]&rowSums(colmat)==1)
+	colorder <- unique(c(colorder,nooverlap))
+	colorder <- unique(c(colorder,innext))
+	nooverlap <- which(colmat[,number]&rowSums(colmat)==1)
+	colorder <- unique(c(colorder,nooverlap))
+	if(allcolumns) colorder <- c(colorder,which(!1:nrow(colmat)%in%colorder)) 
+	X <- X[roworder,colorder]
+	par(mar=c(4, 1, 1, 3))# c(bottom, left, top, right)
+	image(t(X)[,nrow(X):1],col=heatcols,x=c(1:ncol(X)),y=c(1:nrow(X)),axes=F,ylab="",xlab="")
+	if(axisC)axis(1,1:ncol(X),labels=colnames(X),las=2,line = -0.5, tick = 0,cex.axis = cexC)
+	if(axisR)axis(4,1:nrow(X),labels=rownames(X),las=2,line = -0.5, tick = 0,cex.axis = cexR)
+	rin1 <- which(roworder %in% which(rowmat[,1]))
+	cin1 <- which(colorder %in% which(colmat[,1]))
+	nr <- length(roworder)
+	nc <- length(colorder)
+	if(allrows) nr <- nrow(X)
+	if(allcolumns) nc <- ncol(X)
+	xl <- 0.5
+	yb <- nr-length(rin1)+0.5
+	xr <- length(cin1)+0.5
+	yt <- nr+0.5
+	rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=25,lwd=2.5,col=clustercols[1])
+	for(i in 2:number){
+			rin <- which(roworder %in% which(rowmat[,i]))
+			rstart <- numeric()
+			rstop <- numeric()
+			e <- 1
+			rstart[e] <- rin[1]
+			for(j in 2:length(rin)){
+				if(rin[j-1]-rin[j]!=-1){
+					rstop[e] <- rin[j-1]
+					e <- e+1
+					rstart[e] <- rin[j]
+				}
+			}
+			rstop[e] <- rin[j]
+			
+			cin <- which(colorder %in% which(colmat[,i]))
+			cstart <- numeric()
+			cstop <- numeric()
+			e <- 1
+			cstart[e] <- cin[1]
+			for(j in 2:length(cin)){
+				if(cin[j-1]-cin[j]!=-1){
+					cstop[e] <- cin[j-1]
+					e <- e+1
+					cstart[e] <- cin[j]
+				}
+			}
+			cstop[e] <- cin[j]
+			
+			for(j in 1:length(rstart)){
+				for(k in 1:length(cstart)){
+					xl <- cstart[k] - 0.5
+					yb <- nr - rstop[j] + .5
+					xr <- cstop[k]+0.5
+					yt <- nr - rstart[j] + 1.5
+					rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=45*i,lwd=2.5,col=clustercols[i])
+				}
+			} 
+		}
+	}
+	min.raw <- min(X)
+	max.raw <- max(X)
+	z <- seq(min.raw, max.raw, length=length(heatcols))
+	image(z=t(matrix(z, ncol=1)),col=heatcols, 
+			xaxt="n", yaxt="n")
+	axis(4,at=seq(0,1,by=.5),labels=c(round(min.raw,digits=1),0,round(max.raw,digits=1)))
 }
-
-printrect <- function(x, bicResult, overR1, overC1, number, before, order, bicRows, bicCols, xl, xlo, yt, yto, xr, yb){
-    overR <- which(bicResult@RowxNumber[,number])
-    overC <- which(bicResult@NumberxCol[number,])
-
-    overR <- overR[(overR %in% overR1)]
-    overC <- overC[(overC %in% overC1)]
-    R1 <- c(overR[!(overR %in% overR1)],overR1)
-    C1 <- c(overC[(overC %in% overC1)], overC1)
-
-    if(order){
-        print("order")
-        print(overR)
-        if(length(overR)>0){
-            for (j in 1:length(overR)){
-                a<-which(overR[j] == bicRows)
-                rect(xleft = xl[number]- xlo[before]+0.5, xright = xr[number] + 0.5, ytop = length(bicRows) - a  + 0.5, ybottom = length(bicRows) - a - 0.5)
-            }
-        }
-        if(length(overC)>0){
-            for (j in 1:length(overC)){
-                b <- which(overC[j] == bicCols)
-                rect(xleft = b+0.5, xright = b-0.5, ytop = yt[number]  + 0.5, ybottom = length(bicRows) - yb[number] + 0.5)
-            }
-        }
-
-    } else {
-        print("nichtorder")
-        if(length(overR)>0){
-            overR <- overR[!(overR %in% which(bicResult@RowxNumber[,before]))]
-            print(overR)
-            for (j in 1:length(overR)){
-                a <- which(overR[j] == bicRows)
-                rect(xleft = xl[number]- xlo[before]+0.5, xright = xr[number] + 0.5, ytop = length(bicRows) - a  + 0.5, ybottom = length(bicRows) - a - 0.5)
-            }
-        }
-        if(length(overC)>0){
-            overC <- overC[!(overC %in% which(bicResult@NumberxCol[before,]))]
-            for (j in 1:length(overC)){
-                b <-which(overC[j] == bicCols)
-                rect(xleft = b+0.5, xright = b-0.5, ytop = yt[number] + yto[before] + 0.5, ybottom = length(bicRows) - yb[number] + 0.5)
-            }
-        }
-    }
-
-list(overR=R1, overC=C1)
-}
-
-
-
-heatorder <- function(x, bicResult, bicRows1, bicCols1, order, number, end, bicnext){
-    xl <- length(bicCols1)
-    yt <- length(bicRows1)
-
-    bicRows <- which(bicResult@RowxNumber[,number])
-    bicCols <- which(bicResult@NumberxCol[number,])
-    if(order)
-    {
-        bicRows <- bicRows[order(rowSums(x[bicRows,bicCols]))]
-        bicCols <- bicCols[order(colSums(x[bicRows,bicCols]))]
-    }
-
-    bicRows <- bicRows[!(bicRows %in% bicRows1)]
-    bicCols <- bicCols[!(bicCols %in% bicCols1)]
-
-    if(!(number == end) && !order){
-
-            bicRows2 <- which(bicResult@RowxNumber[,bicnext])
-            bicRows <- c(bicRows[!(bicRows %in% bicRows2)],
-                          bicRows[ (bicRows %in% bicRows2)])
-            yto <- sum((bicRows %in% bicRows2))
-            print(paste("yto",yto))
-            bicCols2 <- which(bicResult@NumberxCol[bicnext,])
-            bicCols <- c(bicCols[!(bicCols %in% bicCols2)],
-                          bicCols[ (bicCols %in% bicCols2)])
-
-            xlo <- sum((bicCols %in% bicCols2))
-                  print(paste("xlo",xlo))
-        }else {
-            yto <- 0
-            xlo <- 0
-
-        }
-
-    list(bicRows=c(bicRows1,bicRows), bicCols=c(bicCols1, bicCols), xl=xl, xr=length(c(bicCols1,bicCols)), yt=yt, yb=length(c(bicRows1,bicRows)), xlo=xlo, yto=yto , bicCols, bicRows)
-}
-
-
-
-
