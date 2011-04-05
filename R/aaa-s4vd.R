@@ -3,6 +3,8 @@ setClass('BCs4vd',
 		prototype = prototype(
 				biclustFunction = function(X,...){s4vd(X,...)}))
 
+
+
 BCs4vd <- function() {
 	return(new('BCs4vd'))
 }
