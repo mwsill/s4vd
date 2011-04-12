@@ -178,8 +178,8 @@ s4vd <- function(
 			rows.nc=rows.nc, cols.nc=cols.nc, nbiclust=nbiclust, merr=merr, row.min=row.min, col.min=col.min, pointwise=pointwise, start.iter=start.iter, savepath=savepath, Call=MYCALL)  
 	RowxNumber=t(matrix(unlist(Rows),byrow=T,ncol=length(Rows[[1]])))
 	NumberxCol=matrix(unlist(Cols),byrow=T,ncol=length(Cols[[1]]))
-	RowxNumber <- matrix(RowxNumber[,1:number],ncol=number)
-	NumberxCol <- matrix(NumberxCol[1:number,],nrow=number)
+	if(number)RowxNumber <- matrix(RowxNumber[,1:number],ncol=number)
+	if(number)NumberxCol <- matrix(NumberxCol[1:number,],nrow=number)
 	Number <- number
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
