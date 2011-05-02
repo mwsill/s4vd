@@ -34,7 +34,7 @@ s4vd <- function(
 		ss.thr = c(0.6,0.65),
 		size = 0.5,
 		gamm = 0,
-		iter = 20,
+		iter = 50,
 		nbiclust = 10,
 		merr = 10^(-4),
 		cols.nc=TRUE,
