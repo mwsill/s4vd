@@ -1,7 +1,7 @@
 BCheatmap <- function(
 		X,res,
-		cexR=.75,
-		cexC=.75,
+		cexR=1.5,
+		cexC=1.5,
 		axisR=FALSE,
 		axisC=TRUE,
 		heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
@@ -32,7 +32,7 @@ BCheatmap <- function(
 		yb <- nr-length(rin1)+0.5
 		xr <- length(cin1)+0.5
 		yt <- nr+0.5
-		rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=25,lwd=2.5,col=clustercols[1])
+		rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=25,lwd=4,col=clustercols[1])
 	}else{
 	rowmat <- res@RowxNumber
 	overlap <- rowSums(rowmat)
@@ -95,7 +95,7 @@ BCheatmap <- function(
 	yb <- nr-length(rin1)+0.5
 	xr <- length(cin1)+0.5
 	yt <- nr+0.5
-	rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=25,lwd=2.5,col=clustercols[1])
+	rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=25,lwd=4,col=clustercols[1])
 	for(i in 2:number){
 			rin <- which(roworder %in% which(rowmat[,i]))
 			rstart <- numeric()
@@ -131,7 +131,7 @@ BCheatmap <- function(
 					yb <- nr - rstop[j] + .5
 					xr <- cstop[k]+0.5
 					yt <- nr - rstart[j] + 1.5
-					rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=45*i,lwd=2.5,col=clustercols[i])
+					rect(xleft=xl,ybottom=yb,xright=xr,ytop=yt,density=0,angle=45*i,lwd=4,col=clustercols[i])
 				}
 			} 
 		}
@@ -141,5 +141,5 @@ BCheatmap <- function(
 	z <- seq(min.raw, max.raw, length=length(heatcols))
 	image(z=t(matrix(z, ncol=1)),col=heatcols, 
 			xaxt="n", yaxt="n")
-	axis(4,at=seq(0,1,by=.5),labels=c(round(min.raw,digits=1),0,round(max.raw,digits=1)))
+	axis(4,at=seq(0,1,by=.5),cex.axis=1.5,labels=c(round(min.raw,digits=1),0,round(max.raw,digits=1)))
 }
