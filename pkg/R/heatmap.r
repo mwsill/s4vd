@@ -1,7 +1,7 @@
 BCheatmap <- function(
 		X,res,
 		cexR=1.5,
-		cexC=1.5,
+		cexC=1.3,
 		axisR=FALSE,
 		axisC=TRUE,
 		heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
@@ -18,7 +18,7 @@ BCheatmap <- function(
 		roworder <- c(which(res@RowxNumber[,1]),which(!res@RowxNumber[,1]))
 		colorder <- c(which(res@NumberxCol[1,]),which(!res@NumberxCol[1,]))
 		X <- X[roworder,colorder]
-		par(omi=c(.2,0,0,.5)) 
+		par(mar=c(5, 1, 1, 3))
 		image(t(X)[,nrow(X):1],col=heatcols,x=c(1:ncol(X)),y=c(1:nrow(X)),axes=F,ylab="",xlab="")
 		if(axisC)axis(1,1:ncol(X),labels=colnames(X),las=2,line = -0.5, tick = 0,cex.axis = cexC)
 		if(axisR)axis(4,1:nrow(X),labels=rownames(X),las=2,line = -0.5, tick = 0,cex.axis = cexR)
@@ -81,7 +81,7 @@ BCheatmap <- function(
 	colorder <- unique(c(colorder,nooverlap))
 	if(allcolumns) colorder <- c(colorder,which(!1:nrow(colmat)%in%colorder)) 
 	X <- X[roworder,colorder]
-	par(mar=c(4, 1, 1, 3))# c(bottom, left, top, right)
+	par(mar=c(5, 1, 1, 3))# c(bottom, left, top, right)
 	image(t(X)[,nrow(X):1],col=heatcols,x=c(1:ncol(X)),y=c(1:nrow(X)),axes=F,ylab="",xlab="")
 	if(axisC)axis(1,1:ncol(X),labels=colnames(X),las=2,line = -0.5, tick = 0,cex.axis = cexC)
 	if(axisR)axis(4,1:nrow(X),labels=rownames(X),las=2,line = -0.5, tick = 0,cex.axis = cexR)
