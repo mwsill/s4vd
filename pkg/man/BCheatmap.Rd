@@ -1,18 +1,18 @@
 \name{BCheatmap}
+\alias{BCheatmap}
 \alias{OverlapHeat}
 %\alias{s4vd}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Overlap Heatmap for the visualization of overlapping biclusters
 }
-%\description{
-%
-%}
+\description{ Heatmap function to plot biclustering results. Overlapping biclusters are indicated by colored rectangles.
+}
 \usage{
-BCheatmap(X,res,cexR=.75,cexC=.75,axisR=FALSE,axisC=TRUE,heatcols = diverge_hcl(25, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
-		clustercols= rainbow_hcl(res@Number, c = 100, l = 50),
-		allrows=F,
-		allcolumns=T
+BCheatmap(X, res, cexR = 1.5, cexC = 1.25, axisR = FALSE, axisC= TRUE, heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100)
+		  , power = 1.5, gamma = 2.4, fixup =  TRUE), clustercols = rainbow_hcl(res@Number, c = 100,l = 50),
+		  allrows = FALSE, allcolumns = TRUE)
+
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -25,7 +25,7 @@ the biclustering result
   \item{cexR}{
 relativ font size of the row labels 
 }
-  \item{cexR}{
+  \item{cexC}{
 relativ font size of the column labels
 }
   \item{axisR}{
@@ -37,7 +37,7 @@ if TRUE the column labels will be plotted
   \item{heatcols}{
 a character vector specifing the heatcolors 
 }
-  \item{axisC}{
+  \item{clustercols}{
 a character vector specifing the colors of the rectangles that indicate the rows and columns that belong to a bicluster
 }
   \item{allrows}{
@@ -73,9 +73,9 @@ Martin Sill \
 data(lung200)
 set.seed(12)
 res2 <- s4vd(lung200,pcerv=.5,pceru=0.01,ss.thr=c(0.6,0.65)
-,start.iter=3,size=0.632,cols.nc=T,steps=100,pointwise=T
-,merr=0.0001,iter=100,nbiclust=10,col.overlap=F)
-BCheatmap(lung,res2)
+,start.iter=3,size=0.632,cols.nc=TRUE,steps=100,pointwise=TRUE
+,merr=0.0001,iter=100,nbiclust=10,col.overlap=FALSE)
+BCheatmap(lung200,res2)
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

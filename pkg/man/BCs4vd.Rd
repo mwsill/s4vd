@@ -1,6 +1,7 @@
 \name{BCs4vd}
 \alias{BCs4vd}
 \alias{s4vd}
+\alias{BCs4vd-class}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Robust biclustering by sparse singular value decomposition incorporating stability selection
@@ -124,9 +125,9 @@ Number <- 1
 ressim <- BiclustResult(params,RowxNumber,NumberxCol,Number,info)
 
 #perform s4vd biclustering 
-system.time( ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=F,nbiclust=1,savepath=TRUE))
+system.time( ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=FALSE,nbiclust=1,savepath=TRUE))
 #perform s4vd biclustering with fast pointwise stability selection
-system.time( ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=T,nbiclust=1))
+system.time( ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=TRUE,nbiclust=1))
 #perform ssvd biclustering
 system.time(resssvd <- biclust(X,BCssvd,K=1))
 #agreement of the results with the simulated bicluster
@@ -144,12 +145,12 @@ stabpath(ress4vdpw,1)
 parallelCoordinates(X,ress4vd,1,plotBoth=TRUE, compare=TRUE,order = TRUE)
 
 #lung cancer data set   Bhattacharjee et al. 2001
-data(lung)
+data(lung200)
 set.seed(12)
-res2 <- s4vd(lung,pcerv=.5,pceru=0.01,ss.thr=c(0.6,0.65)
-,start.iter=3,size=0.632,cols.nc=T,steps=100,pointwise=T
-,merr=0.0001,iter=100,nbiclust=10,col.overlap=F)
-BCheatmap(lung,res2)
+res2 <- s4vd(lung200,pcerv=.5,pceru=0.01,ss.thr=c(0.6,0.65)
+,start.iter=3,size=0.632,cols.nc=TRUE,steps=100,pointwise=TRUE
+,merr=0.0001,iter=100,nbiclust=10,col.overlap=FALSE)
+BCheatmap(lung200,res2)
 }
 
 \keyword{biclustering}
