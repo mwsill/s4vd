@@ -11,7 +11,7 @@ BCheatmap <- function(
 )
 {
 	number <- res@Number
-	layout(matrix(c(1,2,1,2), 2, 2, byrow = TRUE),widths=c(9,1),heights=c(1,1))
+	layout(matrix(c(1,2,1,2), 2, 2, byrow = TRUE),widths=c(8.5,1.5),heights=c(1,1))
 	if(number==1){
 		rowmat <- res@RowxNumber
 		colmat <- t(res@NumberxCol)
