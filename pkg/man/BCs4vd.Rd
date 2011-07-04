@@ -98,7 +98,10 @@ Returns an object of class \code{Biclust}.
 Martin Sill \
 \email{m.sill@dkfz.de}
 }
-
+\references{
+Martin Sill, Sebastian Kaiser, Axel Benner and Annette Kopp-Schneider
+"Robust biclustering by sparse singular value decomposition incorporating stability selection", Bioinformatics, 2011 
+}
 \seealso{ \code{\link{biclust}}, \code{\link{Biclust}}}
 
 \examples{
