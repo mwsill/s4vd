@@ -46,7 +46,6 @@ if FALSE only the rows assigned to any bicluster will be plotted
   \item{allcolumns}{
 if FALSE only the columns assigned to any bicluster will be plotted
 }
-}
 %\details{
 %
 }
