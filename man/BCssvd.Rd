@@ -2,6 +2,7 @@
 \alias{BCssvd}
 \alias{BCssvd-class}
 \alias{ssvd}
+\alias{\S4method{biclust}{matrix,BCssvd}}
 
 \title{
 Biclustering via sparse singular value decomposition 
@@ -27,6 +28,9 @@ The function performs a biclustering of the data matrix by sparse singular value
 \arguments{
   \item{x}{
 the matrix to be clustered
+}
+  \item{method}{
+calls the BCssvd() method
 }
   \item{K}{
 number of SSVD-layers 

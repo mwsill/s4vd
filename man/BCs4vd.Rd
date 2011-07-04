@@ -2,6 +2,7 @@
 \alias{BCs4vd}
 \alias{s4vd}
 \alias{BCs4vd-class}
+\alias{\S4method{biclust}{matrix,BCs4vd}}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Robust biclustering by sparse singular value decomposition incorporating stability selection
@@ -34,6 +35,9 @@ The function performs biclustering of the data matrix by sparse singular value d
 \arguments{
   \item{x}{
 The matrix to be clustered.
+}
+  \item{method}{
+calls the BCs4vd() method
 }
   \item{steps}{
 Number of subsamples used to perform the stability selection.
@@ -142,7 +146,7 @@ stabpath(ress4vd,1)
 #selection probabilitys for the pointwise stability selection
 stabpath(ress4vdpw,1)
 #parallel coordinates
-parallelCoordinates(X,ress4vd,1,plotBoth=TRUE, compare=TRUE,order = TRUE)
+parallelCoordinates(X,ress4vd,1,plotBoth=TRUE, compare=TRUE)
 
 #lung cancer data set   Bhattacharjee et al. 2001
 data(lung200)
