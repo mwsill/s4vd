@@ -1,4 +1,4 @@
-import(methods,biclust)
+import(biclust)
 
 export(	s4vd,
 		ssvd,

@@ -6,8 +6,8 @@ BCheatmap <- function(
 		axisC=TRUE,
 		heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
 		clustercols= rainbow_hcl(res@Number, c = 100, l = 50),
-		allrows=F,
-		allcolumns=T
+		allrows=FALSE,
+		allcolumns=TRUE
 )
 {
 	number <- res@Number

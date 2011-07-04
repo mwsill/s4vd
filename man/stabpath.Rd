@@ -1,4 +1,6 @@
 \name{stabpath}
+\alias{stabpath}
+\alias{stabilitypath}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 Stability paths plot
@@ -59,9 +61,9 @@ NumberxCol[1,v!=0] <- TRUE
 Number <- 1
 ressim <- BiclustResult(params,RowxNumber,NumberxCol,Number,info)
 #perform s4vd biclustering 
-system.time( ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=F,nbiclust=1,savepath=TRUE))
+system.time( ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=FALSE,nbiclust=1,savepath=TRUE))
 #perform s4vd biclustering with fast pointwise stability selection
-system.time( ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=T,nbiclust=1))
+system.time( ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=TRUE,nbiclust=1))
 #stability paths
 stabpath(ress4vd,1)
 #selection probabilitys for the pointwise stability selection
