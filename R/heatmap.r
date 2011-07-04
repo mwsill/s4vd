@@ -1,7 +1,7 @@
 BCheatmap <- function(
 		X,res,
 		cexR=1.5,
-		cexC=1.3,
+		cexC=1.25,
 		axisR=FALSE,
 		axisC=TRUE,
 		heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
