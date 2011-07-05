@@ -1,3 +1,5 @@
+% Add one or more standard keywords, see file 'KEYWORDS' in the
+% R documentation directory.
 \name{stabpath}
 \alias{stabpath}
 \alias{stabilitypath}

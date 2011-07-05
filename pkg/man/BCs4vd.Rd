@@ -151,7 +151,7 @@ parallelCoordinates(X,ress4vd,1,plotBoth=TRUE, compare=TRUE)
 #lung cancer data set   Bhattacharjee et al. 2001
 data(lung200)
 set.seed(12)
-res2 <- s4vd(lung200,pcerv=.5,pceru=0.01,ss.thr=c(0.6,0.65)
+res2 <- biclust(lung200,method=BCs4vd(),pcerv=.5,pceru=0.01,ss.thr=c(0.6,0.65)
 ,start.iter=3,size=0.632,cols.nc=TRUE,steps=100,pointwise=TRUE
 ,merr=0.0001,iter=100,nbiclust=10,col.overlap=FALSE)
 BCheatmap(lung200,res2)

@@ -4,6 +4,7 @@ export(	s4vd,
 		ssvd,
 		BCheatmap,
 		stabpath,
+		jaccardmat,
 		BCs4vd,
 		BCssvd
 	)
