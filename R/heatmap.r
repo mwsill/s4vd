@@ -1,7 +1,7 @@
 BCheatmap <- function(
 		X,res,
-		cexR=1.5,
-		cexC=1.25,
+		cexR=.75,
+		cexC=.75,
 		axisR=FALSE,
 		axisC=TRUE,
 		heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100), power = 1.5,gamma = 2.4, fixup = TRUE),
@@ -84,7 +84,7 @@ BCheatmap <- function(
 	par(mar=c(5, 1, 1, 3))# c(bottom, left, top, right)
 	image(t(X)[,nrow(X):1],col=heatcols,x=c(1:ncol(X)),y=c(1:nrow(X)),axes=F,ylab="",xlab="")
 	if(axisC)axis(1,1:ncol(X),labels=colnames(X),las=2,line = -0.5, tick = 0,cex.axis = cexC)
-	if(axisR)axis(4,1:nrow(X),labels=rownames(X),las=2,line = -0.5, tick = 0,cex.axis = cexR)
+	if(axisR)axis(4,nrow(X):1,labels=rownames(X),las=2,line = -0.5, tick = 0,cex.axis = cexR)
 	rin1 <- which(roworder %in% which(rowmat[,1]))
 	cin1 <- which(colorder %in% which(colmat[,1]))
 	nr <- length(roworder)
