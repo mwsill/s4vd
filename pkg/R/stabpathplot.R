@@ -2,18 +2,19 @@ stabpath <- function(res,number){
 	#if(!class(res@Parameters$Method)=="BCs4vd"){
 	#	stop("object is not of class BCs4vd")
 	#}
-	if(res@info[[res@Number+1]]$savepath&!res@info[[res@Number+1]]$pointwise){
+	if(!res@info[[res@Number+1]]$pointwise&res@info[[res@Number+1]]$savepath){
+	#if(res@Parameters$savepath){
 		vc <- res@info[[number]][[1]]
 		uc <- res@info[[number]][[2]]
 		par(mfrow=c(1,2),omi=c(0.25, 0.25, 0.5, 0.25),mar=c(4, 5, 2, 1)) #c(bottom, left, top, right)
 		n <- length(vc$qs)-1
 		p <- length(uc$qs)-1
-		pcerv <- res@Parameters$pcerv
+		pcerv <- res@info[[res@Number+1]]$pcerv
 		lv <- res@info[[number]][[1]]$l 
 		lu <- res@info[[number]][[2]]$l
 		thrv <- ((vc[[4]]^2/((n*pcerv)*n))+1)/2
 		redv <- which(vc[[8]][,lv]>thrv[lv])
-		pceru <- res@Parameters$pceru
+		pceru <- res@info[[res@Number+1]]$pceru
 		thru <- ((uc[[4]]^2/((p*pceru)*p))+1)/2
 		redu <- which(uc[[8]][,lu]>thru[lu])
 		colsv <- rep("black",n)
@@ -40,8 +41,8 @@ stabpath <- function(res,number){
 		par(mfrow=c(1,2),omi=c(0.25, 0.25, 0.5, 0.25)) #c(bottom, left, top, right)
 		n <- length(vc$qs)-1
 		p <- length(uc$qs)-1
-		pcerv <- res@Parameters$pcerv
-		pceru <- res@Parameters$pceru
+		pcerv <- res@info[[res@Number+1]]$pcerv
+		pceru <- res@info[[res@Number+1]]$pceru
 		lv <- res@info[[number]][[1]]$l 
 		lu <- res@info[[number]][[2]]$l
 		redv <- which(vc[[2]]>=res@info[[number]][[1]]$thr)
@@ -57,4 +58,5 @@ stabpath <- function(res,number){
 		abline(h=res@info[[number]][[2]]$thr,col="darkred")
 		#legend(-(p*0.15), 1.05, c(paste("PCER ",pceru)),text.col = c("darkred"),bty="n")
 	}
+	par(mfrow=c(1,1))
 }
