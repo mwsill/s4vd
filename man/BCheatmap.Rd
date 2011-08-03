@@ -9,7 +9,7 @@ Overlap Heatmap for the visualization of overlapping biclusters
 \description{ Heatmap function to plot biclustering results. Overlapping biclusters are indicated by colored rectangles.
 }
 \usage{
-BCheatmap(X, res, cexR = 1.5, cexC = 1.25, axisR = FALSE, axisC= TRUE, heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100)
+BCheatmap(X, res, cexR = .75, cexC = .75, axisR = FALSE, axisC= TRUE, heatcols = diverge_hcl(12, h = c(260, 0), c = 80, l = c(30, 100)
 		  , power = 1.5, gamma = 2.4, fixup =  TRUE), clustercols = rainbow_hcl(res@Number, c = 100,l = 50),
 		  allrows = FALSE, allcolumns = TRUE)
 
