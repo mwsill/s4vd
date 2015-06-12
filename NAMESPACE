@@ -1,4 +1,6 @@
 import(biclust)
+import(irlba)
+import(foreach)
 
 export(	s4vd,
 		ssvd,
@@ -13,7 +15,3 @@ exportClasses(
 		BCs4vd,
 		BCssvd
 		)
-
-
-
-
