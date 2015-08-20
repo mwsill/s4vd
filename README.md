@@ -18,3 +18,11 @@ https://github.com/bwlewis/s4vd/blob/master/vignettes/s4vdp4.pdf
 3. http://cran.r-project.org/web/packages/irlba
 4. Augmented Implicitly Restarted Lanczos Bidiagonalization Methods, J. Baglama and L. Reichel, SIAM J. Sci. Comput. 2005.
 5. http://cran.r-project.org/web/packages/foreach
+
+
+## Installation
+
+```{r}
+library(devtools)                  
+install_github('mwsill/s4vd')
+```

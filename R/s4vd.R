@@ -181,7 +181,7 @@ s4vd <- function(
 	if(number)RowxNumber <- matrix(RowxNumber[,1:number],ncol=number)
 	if(number)NumberxCol <- matrix(NumberxCol[1:number,],nrow=number)
 	Number <- number
-	info[[k+1]] <- params
+	info[[Number+1]] <- params
 	return(BiclustResult(params,RowxNumber,NumberxCol,Number,info))
 }
 
