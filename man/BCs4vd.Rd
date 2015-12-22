@@ -110,7 +110,7 @@ Martin Sill, Sebastian Kaiser, Axel Benner and Annette Kopp-Schneider
 \seealso{ \code{\link{biclust}}, \code{\link{Biclust}}}
 
 \examples{
-
+\donttest{
 # example data set according to the simulation study in Lee et al. 2010
 # generate artifical data set and a correspondig biclust object
 u <- c(10,9,8,7,6,5,4,3,rep(2,17),rep(0,75))
@@ -129,32 +129,16 @@ Number <- 1
 ressim <- BiclustResult(params,RowxNumber,NumberxCol,Number,info)
 
 #perform s4vd biclustering 
-system.time( ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=FALSE,nbiclust=1,savepath=TRUE))
+ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,pointwise=FALSE,nbiclust=1,savepath=TRUE)
 #perform s4vd biclustering with fast pointwise stability selection
-system.time( ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=TRUE,nbiclust=1))
+ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,pointwise=TRUE,nbiclust=1)
 #perform ssvd biclustering
-system.time(resssvd <- biclust(X,BCssvd,K=1))
+resssvd <- biclust(X,BCssvd,K=1)
 #agreement of the results with the simulated bicluster
 jaccardind(ressim,ress4vd)
 jaccardind(ressim,ress4vdpw)
 jaccardind(ressim,resssvd)
-
-#heatmap plot
-BCheatmap(X,ress4vd)
-#stability paths
-stabpath(ress4vd,1)
-#selection probabilitys for the pointwise stability selection
-stabpath(ress4vdpw,1)
-#parallel coordinates
-parallelCoordinates(X,ress4vd,1,plotBoth=TRUE, compare=TRUE)
-
-#lung cancer data set   Bhattacharjee et al. 2001
-data(lung200)
-set.seed(12)
-res1 <- biclust(lung200,method=BCs4vd(),pcerv=.5,pceru=0.01,ss.thr=c(0.6,0.65)
-,start.iter=3,size=0.632,cols.nc=TRUE,steps=100,pointwise=TRUE
-,merr=0.0001,iter=100,nbiclust=10,col.overlap=FALSE)
-BCheatmap(lung200,res1)
+}
 }
 
 \keyword{biclustering}

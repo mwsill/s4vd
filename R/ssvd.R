@@ -11,6 +11,7 @@ function(X, threu = 1, threv = 1, gamu = 0, gamv =0,  u0, v0,
       u0 <- S$u
       v0 <- S$v
     }
+    i <- NULL #to pass CRAN checks without NOTE
     n    <- dim(X)[1]
     d    <- dim(X)[2]
     stop <- FALSE

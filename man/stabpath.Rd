@@ -43,9 +43,9 @@ Martin Sill \
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 %\seealso{
-%kommt noch
 %}
 \examples{
+\donttest{
 # example data set according to the simulation study in Lee et al. 2010
 # generate artifical data set and a correspondig biclust object
 u <- c(10,9,8,7,6,5,4,3,rep(2,17),rep(0,75))
@@ -63,13 +63,18 @@ NumberxCol[1,v!=0] <- TRUE
 Number <- 1
 ressim <- BiclustResult(params,RowxNumber,NumberxCol,Number,info)
 #perform s4vd biclustering 
-system.time( ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=FALSE,nbiclust=1,savepath=TRUE))
+ress4vd <- biclust(X,method=BCs4vd,pcerv=0.5,
+                        pceru=0.5,ss.thr=c(0.6,0.65),steps=500,
+                        pointwise=FALSE,nbiclust=1,savepath=TRUE)
 #perform s4vd biclustering with fast pointwise stability selection
-system.time( ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,pceru=0.5,ss.thr=c(0.6,0.65),steps=500,pointwise=TRUE,nbiclust=1))
+ress4vdpw <- biclust(X,method=BCs4vd,pcerv=0.5,
+                          pceru=0.5,ss.thr=c(0.6,0.65),steps=500,
+                          pointwise=TRUE,nbiclust=1)
 #stability paths
 stabpath(ress4vd,1)
 #selection probabilitys for the pointwise stability selection
 stabpath(ress4vdpw,1)
+}
 }
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the

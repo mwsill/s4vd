@@ -1,13 +1,11 @@
 Package: s4vd
-Version: 1.2
-Title: Biclustering via sparse singular value decomposition
-        incorporating stability selection
-Date: 2010-07-27
+Version: 1.1-1
+Title: Biclustering via Sparse Singular Value Decomposition Incorporating Stability Selection
+Date: 2015-11-11
 Author: Martin Sill, Sebastian Kaiser
 Maintainer: Martin Sill <m.sill@dkfz.de>
 Depends: biclust,methods,irlba,foreach
-Suggests: isa2
-Description: The main function s4vd performs a biclustering via sparse
+Description: The main function s4vd() performs a biclustering via sparse
         singular value decomposition with a nested stability selection.
         The results is an biclust object and thus all methods of the
         biclust package can be applied.
